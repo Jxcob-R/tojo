@@ -1,0 +1,57 @@
+# C output
+
+# Build directory
+build/*
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker files
+*.ilk
+*.map
+*.exp
+
+# Pre-compiled Header
+*.[gp]ch
+
+# Libraries
+*.a
+*.l[oa]
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.dylib
+*.so
+*.so.*
+
+# Executables
+*.out
+*.exe
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.[ip]db
+
+# Final binary
+tojo
+**/tojo
+
+# MacOS artefacts
+*.DS_STORE
+
+# Config and Settings
+.clangd
+
+.*/
+
+# Exceptions
+!.github
+# NOTE: No editor-specific config is excepted
