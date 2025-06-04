@@ -80,12 +80,11 @@ We use a slightly constrained set of commit types:
 
 - `bugfix`
 - `ci`
-- `cmds`
 - `compat`
 - `docs`
-- `ds`
+- `feat`
 - `memfix`
-- `refact`
+- `refactor`
 
 Changes should be small enough to be captured by a single type.
 
