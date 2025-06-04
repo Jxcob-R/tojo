@@ -8,12 +8,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+typedef struct item item;
+
 /**
  * @brief Struct of a single todo item
  */
-typedef struct _item {
+struct item {
     char *item_name;
-} item;
+};
 
 /**
  * @brief Allocate heap memory for an new item
