@@ -45,6 +45,138 @@ static int open_items(int flags) {
     return open(item_path, flags);
 }
 
+/*
+ * @brief Get the user's home directory
+ */
+static char* get_home_directory(void) {
+    struct passwd *pw = getpwuid(getuid());
+    return pw ? pw->pw_dir : NULL;
+}
+
+/*
+ * @brief Check if a directory exists and is accessible
+ */
+static int is_accessible_directory(const char *path) {
+    if (access(path, F_OK | R_OK | W_OK) != 0) {
+        return 0;
+    }
+    
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        return 0;
+    }
+    
+    return S_ISDIR(st.st_mode);
+}
+
+/*
+ * @brief Move up one directory level in the path
+ */
+static int move_up_directory(char *path) {
+    char *last_slash = strrchr(path, '/');
+    
+    if (last_slash == NULL || last_slash == path) {
+        return -1;
+    }
+    
+    *last_slash = '\0';
+    return 0;
+}
+
+/*
+ * @brief Build relative path with appropriate number of "../" prefixes
+ * @param dest
+ * @param levels_up
+ * @param target_dir
+ */
+static void build_relative_path(char *dest, int levels_up,
+                                const char *target_dir) {
+    dest[0] = '\0';
+    
+    if (levels_up == 0) {
+        strcpy(dest, target_dir);
+        return;
+    }
+    
+    for (int i = 0; i < levels_up; i++) {
+        if (i > 0) strcat(dest, "/");
+        strcat(dest, "..");
+    }
+    strcat(dest, "/");
+    strcat(dest, target_dir);
+}
+
+/*
+ * @brief Search for target directory starting from current path, moving up
+ * until home_dir
+ */
+static int find_target_directory(const char *start_path, const char *home_dir, 
+                                 const char *target_dir, int *levels_up) {
+    char search_path[_MAX_PATH];
+    char test_path[_MAX_PATH + sizeof(CONF_PROJ_DIR)];
+    
+    strcpy(search_path, start_path);
+    *levels_up = 0;
+    
+    while (*levels_up < _MAX_PATH_LVLS) {
+        /* Check if we've reached the home directory (exclusive) */
+        if (strcmp(search_path, home_dir) == 0) {
+            return -1;
+        }
+        
+        /* Construct path to test */
+        snprintf(test_path, sizeof(test_path), "%s/%s", search_path,
+                 target_dir);
+        
+        /* Test if directory exists and is accessible */
+        if (is_accessible_directory(test_path)) {
+            return 0;  /* Found it! */
+        }
+        
+        /* Move up one directory level */
+        if (move_up_directory(search_path) != 0) {
+            return -1;  /* Can't go up further */
+        }
+        
+        (*levels_up)++;
+    }
+    
+    return -1;  /* Not found or too many levels */
+}
+
+int dir_find_project(char *dir) {
+    assert(dir);
+    
+    char cwd[_MAX_PATH];
+    char *home_dir;
+    int levels_up;
+    
+    /* Get current working directory */
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        return -1;
+    }
+    
+    /* Get home directory */
+    home_dir = get_home_directory();
+    if (home_dir == NULL) {
+        return -1;
+    }
+    
+    /* Search for the target directory */
+
+    if (find_target_directory(cwd, home_dir, CONF_PROJ_DIR, &levels_up) == 0) {
+        /* Project has been found */
+        /* Build the relative path */
+        build_relative_path(dir, levels_up, CONF_PROJ_DIR);
+
+        return 0;
+    }
+    
+    /* No project found */
+    dir[0] = '\0';
+    return -1;
+}
+
 void dir_construct_path(const char *path, const char *base, char *buf,
                         const size_t max) {
     if (!path || !base) {

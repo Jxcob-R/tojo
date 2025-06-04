@@ -64,15 +64,6 @@ extern void tj_print_vers(void);
 extern int tj_handle_opts(const int argc, char * const argv[]);
 
 /**
- * @brief Check if directory is a current project
- * @param dir Write relative project  directory to dir if it exists, leave
- * empty otherwise.
- * otherwise.
- * @return 0 on success, some error value otherwise
- */
-extern int tj_get_proj_dir(char *dir);
-
-/**
  * @brief Entry point for command handling
  * @param argc
  * @param argv

@@ -27,6 +27,15 @@
 #define _DIR_ITEM_DELIM "\n" /* Item data delimiter - note char * type */
 
 /**
+ * @brief Check if directory is a current project
+ * @param dir Write relative project  directory to dir if it exists, leave
+ * empty otherwise.
+ * otherwise.
+ * @return 0 on success, some error value otherwise
+ */
+int dir_find_project(char *dir);
+
+/**
  * @brief Construct path from a directory path and a base and copy into buf
  * (with a maximum of max bytes)
  * @param path NULL-terminated path name
