@@ -311,7 +311,16 @@ item ** dir_get_all_items(const char *path) {
     dir_construct_path(path, _DIR_ITEM_PATHF, item_path, _MAX_PATH);
 
     item **items = (item **) malloc(sizeof(item *)
-                                    * dir_number_of_items(NULL));
+                                    * (dir_number_of_items(NULL) + 1));
+
+    if (!items) {
+        puts("Could not read any items");
+#ifdef DEBUG
+        log_err("dir_get_all_items: malloc call failed");
+#endif
+        return NULL;
+    }
+    
     unsigned int num_items = 0;
 
     int items_fd = open_items(O_RDONLY);
@@ -344,7 +353,7 @@ item ** dir_get_all_items(const char *path) {
         log_err("Error when reading items");
 #endif
 
-    memset(items + num_items, 0, sizeof(item));
+    items[num_items] = NULL;
 
     return items;
 }

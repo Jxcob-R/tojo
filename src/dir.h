@@ -67,7 +67,9 @@ extern item * dir_find_item(const char *name, const char *path);
 
 /**
  * @brief Count all todo items open in project, separated by _DIR_ITEM_DELIM
- * @param path Project path
+ * @param path Project path, may be NULL if the internal item_path is already
+ * known as a result of a previous dir_* function call that reads/writes to
+ * item path
  * @return Number of items, negative value indicates some error
  */
 extern int dir_number_of_items(const char *path);
