@@ -1,6 +1,7 @@
 CC = gcc
 CBUILDFLAGS = -std=c11 -Werror -I$(SOURCEDIR)
-CTESTFLAGS = -std=c11 -Wall -Wextra -g -DDEBUG -I$(SOURCEDIR)
+CTESTFLAGS = -fsanitize=address -std=c11 -Wall -Wextra -g -DDEBUG \
+			 -I$(SOURCEDIR)
 
 BUILDDIR = build
 SOURCEDIR = src
@@ -53,6 +54,4 @@ $(TARGET): $(OBJECTS) $(BUILDDIR)
 
 clean:
 	rm -rf $(BUILDDIR) $(TARGET)
-# Project directory artefacts
-	rm -rf .$(TARGET)
 
