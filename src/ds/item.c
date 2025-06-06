@@ -33,10 +33,11 @@ void item_set_name_deep(item *itp, const char *const name) {
     strcpy(itp->item_name, name);
 }
 
-void item_print_fancy(item *itp, long print_flags) {
+void item_print_fancy(item *itp, long long print_flags) {
     if (print_flags & ITEM_PRINT_NAME) {
         printf(ITEM_PRINT_NAME_COL "%s " ITEM_PRINT_RESET_COL, itp->item_name);
     }
 
     printf("\n");
+    fflush(stdout);
 }

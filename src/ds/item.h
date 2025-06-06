@@ -8,13 +8,34 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define ITEM_NAME_MAX 1024 /* Maximum item name length */
+
 typedef struct item item;
 
 /**
  * @brief Struct of a single todo item
  */
 struct item {
+    ssize_t item_id;
     char *item_name;
+    enum status {
+        TODO,
+        IN_PROG,
+        DONE
+    } item_st;
+    /*
+     * Future additions
+     * File or directory target name in project -- relative to project root
+    char item_target[_MAX_PATH];
+     * Date and time item was last changed
+    time_t item_time;
+     * Priority of an item
+     enum priority {
+        LOW,
+        MED,
+        HIGH
+     } item_priority;
+     */
 };
 
 /**
@@ -48,13 +69,15 @@ extern void item_set_name_deep(item *itp, const char *const name);
 #define ITEM_PRINT_RESET_COL          "\x1b[0m"
 
 /* Print flags */
-#define ITEM_PRINT_NAME (1 << 0)
+#define ITEM_PRINT_ID (1 << 0)
+#define ITEM_PRINT_NAME (1 << 1)
+#define ITEM_PRINT_STATUS (1 << 2);
 
 /**
  * @brief Print the content of the item pointed to by itp given by print_flags
  * @param itp Pointer to item
  * @param print_flags Flags specifying print style
  */
-extern void item_print_fancy(item *itp, long print_flags);
+extern void item_print_fancy(item *itp, long long print_flags);
 
 #endif

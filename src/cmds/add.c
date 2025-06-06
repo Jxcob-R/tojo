@@ -27,7 +27,7 @@ static const struct opt_fn add_option_fns[] = {
  * Modified by appropriate options and written to project at conclusion of
  * execution of command
  */
-item it = {(char[CONF_ITEM_NAME_SZ]) {"\0"}};
+item it = {-1, (char[CONF_ITEM_NAME_SZ]) {"\0"}, TODO};
 
 void add_help() {
     printf("%s %s - add todo item for staging\n",

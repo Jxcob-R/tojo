@@ -7,42 +7,129 @@
 #include "dev-utils/debug-out.h"
 #endif
 
-static char item_path[_MAX_PATH];
+static char items_path[_MAX_PATH];
+static char todo_path[_MAX_PATH];
+static char ip_path[_MAX_PATH];
+static char done_path[_MAX_PATH];
+
+/**
+ * @brief Set up global path variables to default values if not already done
+ * so. Should be one of the first calls made by dir_* functions (excluding) for
+ * project initialisation.
+ * @param path Path to project directory
+ * @note Modifies global variables, should be used once in a dir API call
+ */
+static void setup_path_names(const char *const path) {
+    /* Set up items path */
+    if (!*items_path)
+        dir_construct_path(path, _DIR_ITEM_PATH_D, items_path, _MAX_PATH);
+
+    /* Item file names */
+    if (!*todo_path)
+        dir_construct_path(items_path, _DIR_ITEM_TODO_F, todo_path, _MAX_PATH);
+    if (!*ip_path)
+        dir_construct_path(items_path, _DIR_ITEM_INPROG_F, ip_path, _MAX_PATH);
+    if (!*done_path)
+        dir_construct_path(items_path, _DIR_ITEM_DONE_F, done_path, _MAX_PATH);
+
+}
+
+/**
+ * @brief Create a file given by fname; used for project files.
+ * @param fname Name of file to create
+ * @return 0 for successful file creation
+ * @return 1 in case of EEXIST
+ * @return 2 in case of other error
+ */
+static int create_file(const char *const fname) {
+    int fd = open(fname, O_CREAT, CONF_DIR_PERMS & 0666);
+    if (fd < 0) {
+        return 1 + (errno != EEXIST);
+    }
+    close(fd);
+    return 0;
+}
 
 /**
  * @brief creates items file, file descriptor is closed immediately if creation
  * is successful
- * @return 0 on success, -1 on error
- * @see open, close
+ * @return 0 on success
+ * @return -1 on error
+ * @see open, close, mkdir
  */
-static int create_items(const char *path) {
-    dir_construct_path(path, _DIR_ITEM_PATHF, item_path, _MAX_PATH);
+static int create_items(const char *const path) {
+    dir_construct_path(path, _DIR_ITEM_PATH_D, items_path, _MAX_PATH);
 
-    /* Create file as a contained resource */
-    /* Plain text file */
-    int retfd = open(item_path, O_CREAT, CONF_DIR_PERMS & 0666);
-    if (retfd == -1) {
+    assert(items_path != NULL);
+
+    /* Create directory */
+    int ret = mkdir(items_path, CONF_DIR_PERMS);
+
+    if (ret == -1) {
 #ifdef DEBUG
-        log_err("Could not create items file");
+        log_err("Could not create items directory");
 #endif
-        /* Function should only be called on new projects */
+        /*
+         * Function should only ever be called on new projects
+         * This might have other consequences down the road that I, frankly,
+         * don't want to think about right now
+         */
         assert(errno != EEXIST);
         return -1;
     }
-    close(retfd);
+
+    /* Open item storage files */
+    int file_creation;
+    file_creation = create_file(todo_path)
+                    + create_file(ip_path)
+                    + create_file(done_path);
+
+    if (file_creation != 0) {
+#ifdef DEBUG
+        log_err("Could not create item storage files");
+#endif
+        return -1;
+    }
 
     return 0;
 }
 
 /**
- * @brief Open items file in project, static item_path must be set correctly
- * @param flags open flags
+ * @brief Open all item files in items directory and populate item_fds array.
+ * @param flags open function flags
+ * @param item_fds Array of file descriptors to write open item file
+ * descriptors to
+ * @note Can only support 'simple' flags that do not require extra arguments,
+ * i.e. O_WRONLY or O_RDWR
+ * @note Errors with open are not handled
  * @see open
  */
-static int open_items(int flags) {
-    assert(strlen(item_path) >= sizeof(CONF_PROJ_DIR) + sizeof(_DIR_ITEM_PATHF)
-           - 1);
-    return open(item_path, flags);
+static void open_items(const int flags, int item_fds[_DIR_ITEM_NUM_FILES]) {
+    assert(strlen(items_path)
+           >= sizeof(CONF_PROJ_DIR) + sizeof(_DIR_ITEM_PATH_D) - 1);
+
+    if (!item_fds)
+        return;
+
+    item_fds[0] = open(todo_path, flags);
+    item_fds[1] = open(ip_path, flags);
+    item_fds[2] = open(done_path, flags);
+
+    if (errno == ENOTDIR) {
+        puts("No project listed");
+#ifdef DEBUG
+        log_err("open_items called with incorrect path");
+#endif
+    }
+}
+
+static void close_items(const int item_fds[_DIR_ITEM_NUM_FILES]) {
+    if (!item_fds)
+        return;
+
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
+        close(item_fds[i]);
+    }
 }
 
 /*
@@ -207,6 +294,9 @@ int dir_init(const char *path) {
     int ret = mkdir(path, CONF_DIR_PERMS);
     if (ret < 0) return ret;
 
+    /* Set global variables */
+    setup_path_names(path);
+
     /* Items */
     ret = create_items(path);
 
@@ -214,15 +304,17 @@ int dir_init(const char *path) {
 }
 
 /**
- * @brief Read item name from file opened by items_fd
- * @return Pointer to allocated item, NULL if no matching item is found
+ * @brief Read item name from file opened by file descriptor fd which contains
+ * item data
+ * @return Pointer to allocated item
+ * @return NULL if no matching item is found
  * @see item_init, item_free
  */
-static item * read_item_name(const char *name, const int items_fd) {
+static item * fd_read_item(const char *name, const int fd) {
     assert(name); /* Name exists */
-    assert(items_fd > 0); /* Valid file descriptor */
+    assert(fd > 0); /* Valid file descriptor */
     /* Has read perms */
-    assert((fcntl(items_fd, F_GETFL) & O_ACCMODE) != O_WRONLY);
+    assert((fcntl(fd, F_GETFL) & O_ACCMODE) != O_WRONLY);
 
     size_t name_len = strlen(name);
 
@@ -230,10 +322,13 @@ static item * read_item_name(const char *name, const int items_fd) {
     /* Assumes that each line contains only the item name */
     char buf[CONF_ITEM_NAME_SZ];
     char *next_name;
-    int bytes;
+    ssize_t bytes;
 
     /* Read lines */
-    while ((bytes = read(items_fd, buf, sizeof(buf) - 1)) > 0) {
+    while ((bytes = read(fd, buf, sizeof(buf) - 1)) > 0) {
+        if (bytes < 0)
+            return NULL;
+
         buf[bytes] = '\0';
 
         /* Extract Names */
@@ -253,17 +348,28 @@ static item * read_item_name(const char *name, const int items_fd) {
 
 item * dir_find_item(const char *name, const char *path) {
     assert(path);
-    int items_fd = open_items(O_RDONLY);
+    
+    setup_path_names(path);
 
-    if (items_fd < 0) {
+    /* Item file descriptors open for reading */
+    int item_fds[_DIR_ITEM_NUM_FILES];
+
+    open_items(O_RDONLY, item_fds);
+
+    /* Simple opening check */
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
+        if (item_fds[i] < 0) {
 #ifdef DEBUG
-        log_err("Could not open items for reading");
+            log_err("Could not open item file for reading");
 #endif
-        return NULL;
+            return NULL;
+        }
     }
 
-    item *itp = read_item_name(name, items_fd);
-    close(items_fd);
+    item *itp = NULL;
+
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES && !itp; i++)
+        itp = fd_read_item(name, item_fds[i]);
 
 #ifdef DEBUG
     if (itp == NULL) {
@@ -271,25 +377,26 @@ item * dir_find_item(const char *name, const char *path) {
     }
 #endif
 
+    close_items(item_fds);
+
     return itp;
 }
 
-int dir_number_of_items(const char *path) {
-    if (!*item_path) {
-        dir_construct_path(path, _DIR_ITEM_PATHF, item_path, _MAX_PATH);
-    }
-
-    int items_fd = open_items(O_RDONLY);
-
-    if (items_fd < 0) {
-        return items_fd;
-    }
-
+/**
+ * @brief Count items in file descriptor fd
+ * @pararm fd File descriptor to read, assumed to contain item data in required
+ * format
+ * @note To abstract buffered reading to separate function TODO:
+ */
+static int fd_count_items(const int fd) {
     char buf[BUFSIZ];
     int num_items = 0;
-    size_t bytes;
+    ssize_t bytes;
+    
+    while ((bytes = read(fd, buf, sizeof(buf) - 1)) > 0) {
+        if (bytes < 0)
+            return bytes; /* Return error */
 
-    while ((bytes = read(items_fd, buf, sizeof(buf) - 1)) > 0) {
         buf[bytes] = '\0';
         /* Count delimiters found in buffered read */
         const char *ptr = buf;
@@ -298,17 +405,51 @@ int dir_number_of_items(const char *path) {
             ptr++;
         }
     }
+    return num_items;
+}
 
-    close(items_fd);
+int dir_number_of_items(const char *const path) {
+    setup_path_names(path);
+
+    /* Open and check item file descriptors */
+    int item_fds[_DIR_ITEM_NUM_FILES];
+
+    open_items(O_RDONLY, item_fds);
+
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
+        if (item_fds[i] < 0) {
+#ifdef DEBUG
+            log_err("Could not open item file for reading");
+#endif
+            return -1;
+        }
+    }
+
+    int num_items = 0;
+
+    /*
+     * Buffered read of items
+     * All file descriptors are read meaning that all items (whether complete
+     * or outstanding) are counted
+     */
+    int file_count; /* Scratch variable */
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
+        file_count = fd_count_items(item_fds[i]);
+        if (file_count < 0)
+            return file_count;
+        num_items += file_count;
+    }
+
+    close_items(item_fds);
 
     return num_items;
 }
 
-item ** dir_get_all_items(const char *path) {
+item ** dir_get_all_items(const char *const path) {
     assert(path);
     
     /* Construct item path */
-    dir_construct_path(path, _DIR_ITEM_PATHF, item_path, _MAX_PATH);
+    dir_construct_path(path, _DIR_ITEM_PATH_D, items_path, _MAX_PATH);
 
     item **items = (item **) malloc(sizeof(item *)
                                     * (dir_number_of_items(NULL) + 1));
@@ -316,35 +457,44 @@ item ** dir_get_all_items(const char *path) {
     if (!items) {
         puts("Could not read any items");
 #ifdef DEBUG
-        log_err("dir_get_all_items: malloc call failed");
+        log_err("dir_get_all_items: malloc call failed, check item entries");
 #endif
         return NULL;
     }
     
+    int item_fds[_DIR_ITEM_NUM_FILES];
+
+    open_items(O_RDONLY, item_fds);
+
+    /* Simple opening check */
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++)
+        if (item_fds[i] < 0)
+            return NULL;
+
     unsigned int num_items = 0;
-
-    int items_fd = open_items(O_RDONLY);
-
-    if (items_fd < 0)
-        return items;
 
     char buf[CONF_ITEM_NAME_SZ];
     char *next_name;
-    int bytes;
+    ssize_t bytes;
 
     /* Read lines */
-    while ((bytes = read(items_fd, buf, sizeof(buf) - 1)) > 0) {
-        buf[bytes] = '\0';
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
+        while ((bytes = read(item_fds[i], buf, sizeof(buf) - 1)) > 0) {
+            if (bytes < 0)
+                return NULL;
 
-        /* Extract Names */
-        next_name = strtok(buf, _DIR_ITEM_DELIM);
+            buf[bytes] = '\0';
 
-        while (next_name != NULL) {
-            /* Add new initialised item */
-            items[num_items] = item_init();
-            item_set_name_deep(items[num_items], next_name);
-            num_items++;
-            next_name = strtok(NULL, _DIR_ITEM_DELIM);
+            /* Extract Names */
+            next_name = strtok(buf, _DIR_ITEM_DELIM);
+
+            while (next_name != NULL) {
+                /* Add new initialised item */
+                items[num_items] = item_init();
+                item_set_name_deep(items[num_items], next_name);
+                num_items++;
+                next_name = strtok(NULL, _DIR_ITEM_DELIM);
+            }
         }
     }
 
@@ -353,35 +503,71 @@ item ** dir_get_all_items(const char *path) {
         log_err("Error when reading items");
 #endif
 
+    /* Set last item pointer to NULL */
     items[num_items] = NULL;
 
     return items;
 }
+
 /**
- * @brief Write the item name of the item pointed to by itp to the items_fd
+ * @brief Write the item name of the item pointed to by itp to to the
+ * appropriate items file
+ * @param itp Pointer to item to write data of
+ * @return 0 on success
+ * @return -1 on error
  */
-static int write_item_name(const item *itp, const int items_fd) {
-    return write(items_fd, itp->item_name, strlen(itp->item_name));
+static int write_item_name(const item *itp) {
+    int fd;
+    int open_flags = O_APPEND | O_RDWR;
+
+    switch (itp->item_st) {
+    case TODO:
+        fd = open(todo_path, open_flags);
+        break;
+    case IN_PROG:
+        fd = open(ip_path, open_flags);
+        break;
+    case DONE:
+        fd = open(done_path, open_flags);
+        break;
+#ifdef DEBUG
+    default:
+        log_err("Attempting to write item with an invalid state");
+#endif
+    }
+
+    /* Current write involves no padding */
+    /* TODO: Add padding space on write */
+    if (write(fd, itp->item_name, strlen(itp->item_name)) < 0)
+        return -1;
+
+    if (write(fd, _DIR_ITEM_DELIM, sizeof(_DIR_ITEM_DELIM)) < 0)
+        return -1;
+
+    return 0;
 }
 
 int dir_write_item(const item *it, const char *path) {
     assert(it != NULL);
 
-    /* Make path and write item */
-    dir_construct_path(path, _DIR_ITEM_PATHF, item_path, _MAX_PATH);
+    setup_path_names(path);
 
-    int items_fd = open_items(O_APPEND | O_RDWR); /* Append writing */
+    int item_fds[_DIR_ITEM_NUM_FILES];
+    open_items(O_APPEND | O_RDWR, item_fds);
 
-    if (items_fd < 0)
-        return -1;
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
+        if (item_fds[i] < 0) {
+#ifdef DEBUG
+            log_err("Could not open item file for reading");
+#endif
+            return -1;
+        }
+    }
 
     /* Write item data to items file */
-    write_item_name(it, items_fd);
-
-    write(items_fd, _DIR_ITEM_DELIM, sizeof(_DIR_ITEM_DELIM) - 1);
-    
-    if (close(items_fd) == -1)
+    if (write_item_name(it) < 0)
         return -1;
-
+    
+    close_items(item_fds);
     return 0;
 }

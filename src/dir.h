@@ -22,9 +22,15 @@
  * Project directory substructure
  * This should be considered only internally and not part of the dir interface
  */
-#define _DIR_ITEM_PATHF "items"
+#define _DIR_ITEM_PATH_D "items"    /* Items directory */
+#define _DIR_ITEM_TODO_F "todo"     /* Items staged for completion */
+#define _DIR_ITEM_INPROG_F "ip"     /* Items currently mared as in progress */
+#define _DIR_ITEM_DONE_F "done"     /* Complete items */
 
-#define _DIR_ITEM_DELIM "\n" /* Item data delimiter - note char * type */
+#define _DIR_ITEM_NUM_FILES 3 /* Number of item files categorised */
+
+#define _DIR_ITEM_DELIM "\n"        /* Item delimiter - note char * type */
+#define _DIR_ITEM_FIELD_DELIM ":"   /* Item field delimiter */
 
 /**
  * @brief Check if directory is a current project
@@ -70,7 +76,8 @@ extern item * dir_find_item(const char *name, const char *path);
  * @param path Project path, may be NULL if the internal item_path is already
  * known as a result of a previous dir_* function call that reads/writes to
  * item path
- * @return Number of items, negative value indicates some error
+ * @return Number of items
+ * @return Negative value in case of error
  */
 extern int dir_number_of_items(const char *path);
 
@@ -87,6 +94,8 @@ extern item ** dir_get_all_items(const char *path);
  * @brief Write the item it to the project.
  * @param it Pointer to item to write
  * @param path Path to the project
+ * @return 0 on success
+ * @return -1 on error
  */
 extern int dir_write_item(const item *it, const char *path);
 
