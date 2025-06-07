@@ -32,14 +32,14 @@ void list_help() {
 }
 
 void list_all_names() {
-    item **list_items = dir_get_all_items(path);
+    item **list_items = dir_read_all_items(path);
 
     printf("Current tasks open in this project:\n");
 
     /* Traverse array of items */
     unsigned int curr_item = 0;
 
-    while (list_items[curr_item]) { /* Until no names remain */
+    while (list_items[curr_item] != NULL) { /* Until no names remain */
         item_print_fancy(list_items[curr_item] , ITEM_PRINT_NAME);
         item_free(list_items[curr_item]);
         curr_item++;

@@ -18,9 +18,6 @@
 /* GitHub and contributing */
 #define CONF_GITHUB "https://github.com/..."
 
-/* Restrictions */
-#define CONF_ITEM_NAME_SZ 256 /* Maximum size of item name */
-
 /* Program return codes */
 #define RET_NO_ARGS 1
 #define RET_INVALID_OPTS 2

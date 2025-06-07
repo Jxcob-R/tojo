@@ -1,6 +1,7 @@
 #include "add.h"
 #include "config.h"
 #include "dir.h"
+#include "ds/item.h"
 #include "opts.h"
 
 #ifdef DEBUG
@@ -27,7 +28,7 @@ static const struct opt_fn add_option_fns[] = {
  * Modified by appropriate options and written to project at conclusion of
  * execution of command
  */
-item it = {-1, (char[CONF_ITEM_NAME_SZ]) {"\0"}, TODO};
+item it = {-1, (char[ITEM_NAME_MAX]) {"\0"}, TODO};
 
 void add_help() {
     printf("%s %s - add todo item for staging\n",
@@ -41,7 +42,7 @@ void add_help() {
 
 void add_item_name(const char *name) {
     assert(name);
-    item_set_name_deep(&it, name);
+    item_set_name_deep(&it, name, strlen(name));
     printf("Added item '%s' to task list for project\n", name);
 }
 
@@ -69,7 +70,7 @@ int add_cmd(const int argc, char * const argv[], const char *proj_path) {
     }
 
     /* Write added item to appropriate location */
-    if (dir_write_item(&it, proj_path) == -1)
+    if (dir_append_item(&it, proj_path) == -1)
         return -1;
 
     return 0;

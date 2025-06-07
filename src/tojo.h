@@ -1,7 +1,9 @@
 #ifndef TOJO_H
 #define TOJO_H
 
-#define _GNU_SOURCE 1
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #include <assert.h>
 #include <getopt.h>

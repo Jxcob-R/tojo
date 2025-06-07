@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define ITEM_NAME_MAX 1024 /* Maximum item name length */
+#define ITEM_NAME_MAX 256 /* Maximum item name length */
 
 typedef struct item item;
 
@@ -21,7 +21,8 @@ struct item {
     enum status {
         TODO,
         IN_PROG,
-        DONE
+        DONE,
+        ITEM_STATUS_COUNT, /* Can later be constant */
     } item_st;
     /*
      * Future additions
@@ -61,8 +62,10 @@ extern void item_set_name(item *itp, char *name);
 /**
  * @brief Set the name of the item by copying data to heap-memory
  * @see item_set_name for a simple use of the name reference
+ * @note Will insert null byte if the string name of size len characters is
+ * not already null terminated (that is if name[len - 1] != '\0')
  */
-extern void item_set_name_deep(item *itp, const char *const name);
+extern void item_set_name_deep(item *itp, const char *const name, const size_t len);
 
 /* Print styling using ANSI colours */
 #define ITEM_PRINT_NAME_COL           "\x1b[32m"
