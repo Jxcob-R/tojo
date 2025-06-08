@@ -42,7 +42,7 @@ void add_help() {
 
 void add_item_name(const char *name) {
     assert(name);
-    item_set_name_deep(&it, name, strlen(name));
+    item_set_name_deep(&it, name, strlen(name) + 1);
     printf("Added item '%s' to task list for project\n", name);
 }
 
@@ -68,6 +68,9 @@ int add_cmd(const int argc, char * const argv[], const char *proj_path) {
     if (opts_handled == 0 && argv[1]) {
         add_item_name(argv[1]);
     }
+
+    /* ID set to next available number */
+    it.item_id = dir_total_items(proj_path);
 
     /* Write added item to appropriate location */
     if (dir_append_item(&it, proj_path) == -1)

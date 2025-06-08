@@ -65,16 +65,23 @@ extern void item_set_name(item *itp, char *name);
  * @note Will insert null byte if the string name of size len characters is
  * not already null terminated (that is if name[len - 1] != '\0')
  */
-extern void item_set_name_deep(item *itp, const char *const name, const size_t len);
+extern void item_set_name_deep(item *itp, const char *const name,
+                               const size_t len);
 
 /* Print styling using ANSI colours */
-#define ITEM_PRINT_NAME_COL           "\x1b[32m"
-#define ITEM_PRINT_RESET_COL          "\x1b[0m"
+#define _ITEM_PRINT_ID_COL "\x1b[1m"
+
+/* Status colours from enum status */
+#define _ITEM_PRINT_ST_TO_COL(st) \
+    ((const char*[]){"\x1b[33m", "\x1b[32m", "\x1b[34m"})[st]
+
+/* Reset colour */
+#define _ITEM_PRINT_RESET_COL "\x1b[0m"
 
 /* Print flags */
 #define ITEM_PRINT_ID (1 << 0)
 #define ITEM_PRINT_NAME (1 << 1)
-#define ITEM_PRINT_STATUS (1 << 2);
+#define ITEM_PRINT_STATUS (1 << 2) /* Currently unused */
 
 /**
  * @brief Print the content of the item pointed to by itp given by print_flags

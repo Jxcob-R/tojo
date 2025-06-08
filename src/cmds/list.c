@@ -40,7 +40,8 @@ void list_all_names() {
     unsigned int curr_item = 0;
 
     while (list_items[curr_item] != NULL) { /* Until no names remain */
-        item_print_fancy(list_items[curr_item] , ITEM_PRINT_NAME);
+        item_print_fancy(list_items[curr_item],
+                         ITEM_PRINT_ID | ITEM_PRINT_NAME);
         item_free(list_items[curr_item]);
         curr_item++;
     }
