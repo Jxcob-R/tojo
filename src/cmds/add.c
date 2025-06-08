@@ -28,7 +28,7 @@ static const struct opt_fn add_option_fns[] = {
  * Modified by appropriate options and written to project at conclusion of
  * execution of command
  */
-item it = {-1, (char[ITEM_NAME_MAX]) {"\0"}, TODO};
+static item it = {-1, (char[ITEM_NAME_MAX]) {"\0"}, TODO};
 
 void add_help() {
     printf("%s %s - add todo item for staging\n",
@@ -70,10 +70,10 @@ int add_cmd(const int argc, char * const argv[], const char *proj_path) {
     }
 
     /* ID set to next available number */
-    it.item_id = dir_total_items(proj_path);
+    it.item_id = dir_total_items();
 
     /* Write added item to appropriate location */
-    if (dir_append_item(&it, proj_path) == -1)
+    if (dir_append_item(&it) == -1)
         return -1;
 
     return 0;

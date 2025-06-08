@@ -16,7 +16,7 @@
 #define CONF_DIR_PERMS 0755
 
 /* GitHub and contributing */
-#define CONF_GITHUB "https://github.com/..."
+#define CONF_GITHUB "https://github.com/Jxcob-R/tojo"
 
 /* Program return codes */
 #define RET_NO_ARGS 1

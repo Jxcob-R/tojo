@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "ds/item.h"
@@ -65,6 +66,8 @@
  * empty otherwise.
  * otherwise.
  * @return 0 on success, some error value otherwise
+ * @note Must be called before any other dir* function due to static memory
+ * usage
  */
 int dir_find_project(char *dir);
 
@@ -78,8 +81,8 @@ int dir_find_project(char *dir);
  * @note Does not check if the base is a member of the directory provided
  * by path, nor are any other existence checks made
  */
-extern void dir_construct_path(const char * const path, const char *base, char *buf,
-                               const size_t max);
+extern void dir_construct_path(const char * const path, const char *base,
+                               char *buf, const size_t max);
 
 /**
  * @brief Initialise project directory at path
@@ -92,30 +95,25 @@ extern int dir_init(const char *path);
 /**
  * @brief Find item with name in project
  * @param name Name of item to find
- * @param path Path to the project
  * @return Pointer to an item allocated on the heap, NULL if the item does not
  * exist
  */
-extern item * dir_find_item(const char *name, const char *path);
+extern item * dir_find_item(const char *name);
 
 /**
  * @brief Count the total number of items added to the project, regardless of
  * status
- * @param path Project path, may be NULL if the internal item_path is already
- * known as a result of a previous dir_* function call that reads/writes to
- * item path
  * @return Number of items
  * @return Negative value in case of error
  */
-extern int dir_total_items(const char *path);
+extern int dir_total_items();
 
 /**
  * @brief Read items of a single given status
- * @param path Project path
  * @param st Status of items to read
  * @return NULL-terminated array of item pointers allocated on the heap
  */
-extern item ** dir_read_items_status(const char *const path, enum status st);
+extern item ** dir_read_items_status(enum status st);
 
 /**
  * @brief Read all items in project at path
@@ -124,15 +122,22 @@ extern item ** dir_read_items_status(const char *const path, enum status st);
  * @note Function *only* extracts names as of now which are assumed to be
  * separated by some _DIR_ITEM_DELIM
  */
-extern item ** dir_read_all_items(const char * const path);
+extern item ** dir_read_all_items();
 
 /**
  * @brief Append write the item it to the project.
  * @param it Pointer to item to write
- * @param path Path to the project
  * @return 0 on success
  * @return -1 on error
  */
-extern int dir_append_item(const item *it, const char *path);
+extern int dir_append_item(const item *it);
 
+/**
+ * @brief Change status of item given its ID
+ * @param id ID of item to change
+ * @param new_status Status to change item to
+ * @return 0 if item status change was succesful
+ * @return -1 if item status could not be changed
+ */
+extern int dir_change_item_status_id(ssize_t id, enum status new_status);
 #endif

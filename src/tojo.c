@@ -6,6 +6,7 @@
 #include "cmds/add.h"
 #include "cmds/init.h"
 #include "cmds/list.h"
+#include "cmds/work.h"
 
 #ifdef DEBUG
 #include "dev-utils/debug-out.h"
@@ -29,9 +30,10 @@ static const struct opt_fn tj_option_fns[] = {
 /* Commands */
 
 static const struct cmd tj_cmds[] = {
+    {ADD_CMD_NAME,  add_cmd},      /* Add an item */
     {INIT_CMD_NAME, init_cmd},     /* Project initialisation */
     {LIST_CMD_NAME, list_cmd},     /* List items */
-    {ADD_CMD_NAME, add_cmd},       /* Add an item */
+    {WORK_CMD_NAME, work_cmd},     /* Commence work on an item */
     {NULL, NULL}
 };
 

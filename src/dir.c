@@ -7,6 +7,8 @@
 #include "dev-utils/debug-out.h"
 #endif
 
+static char proj_path[_MAX_PATH] =  { '\0' };
+
 static char items_path[_MAX_PATH] = { '\0' };
 static char todo_path[_MAX_PATH] =  { '\0' };
 static char ip_path[_MAX_PATH] =    { '\0' };
@@ -16,13 +18,17 @@ static char done_path[_MAX_PATH] =  { '\0' };
  * @brief Set up global path variables to default values if not already done
  * so. Should be one of the first calls made by dir_* functions (excluding) for
  * project initialisation.
- * @param path Path to project directory
+ * @param path Path to project directory may be NULL
  * @note Modifies global variables, should be used once in a dir API call
+ * @note Calling with NULL assumes that project path is already known
  */
-static void setup_path_names(const char *const path) {
+static void setup_path_names(const char * const path) {
+    if (!*proj_path && path)
+        strcpy(proj_path, path);
+
     /* Set up items path */
     if (!*items_path)
-        dir_construct_path(path, _DIR_ITEM_PATH_D, items_path, _MAX_PATH);
+        dir_construct_path(proj_path, _DIR_ITEM_PATH_D, items_path, _MAX_PATH);
 
     /* Item file names */
     if (!*todo_path)
@@ -57,10 +63,8 @@ static int create_file(const char *const fname) {
  * @return -1 on error
  * @see open, close, mkdir
  */
-static int create_items(const char *const path) {
-    dir_construct_path(path, _DIR_ITEM_PATH_D, items_path, _MAX_PATH);
-
-    assert(items_path != NULL);
+static int create_items() {
+    setup_path_names(NULL);
 
     /* Create directory */
     int ret = mkdir(items_path, CONF_DIR_PERMS);
@@ -79,10 +83,8 @@ static int create_items(const char *const path) {
     }
 
     /* Open item storage files */
-    int file_creation;
-    file_creation = create_file(todo_path)
-                    + create_file(ip_path)
-                    + create_file(done_path);
+    int file_creation =
+        create_file(todo_path) + create_file(ip_path) + create_file(done_path);
 
     if (file_creation != 0) {
 #ifdef DEBUG
@@ -264,6 +266,9 @@ int dir_find_project(char *dir) {
         /* Build the relative path */
         build_relative_path(dir, levels_up, CONF_PROJ_DIR);
 
+        /* Store in static context for future dir_* calls */
+        strcpy(proj_path, dir);
+
         return 0;
     }
     
@@ -306,7 +311,7 @@ int dir_init(const char *path) {
     setup_path_names(path);
 
     /* Items */
-    ret = create_items(path);
+    ret = create_items();
 
     return ret;
 }
@@ -354,10 +359,8 @@ static item * fd_read_item(const char *name, const int fd) {
     return NULL;
 }
 
-item * dir_find_item(const char *name, const char *path) {
-    assert(path);
-    
-    setup_path_names(path);
+item * dir_find_item(const char *name) {
+    setup_path_names(NULL);
 
     /* Item file descriptors open for reading */
     int item_fds[_DIR_ITEM_NUM_FILES];
@@ -407,8 +410,8 @@ static int fd_total_items(const int fd) {
     return sb.st_size / DIR_ITEM_ENTRY_LEN;
 }
 
-int dir_total_items(const char *const path) {
-    setup_path_names(path);
+int dir_total_items() {
+    setup_path_names(NULL);
 
     /* Open and check item file descriptors */
     int item_fds[_DIR_ITEM_NUM_FILES];
@@ -474,12 +477,13 @@ item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
     return item;
 }
 
-item ** dir_read_items_status(const char *const path, enum status st) {
-    setup_path_names(path);
+item ** dir_read_items_status(enum status st) {
+    setup_path_names(NULL);
 
     const int rd_flags = O_RDONLY;
     int fd;
 
+    /* This is to be refactored from switch-case statement */
     switch (st) {
     case TODO:
         fd = open(todo_path, rd_flags);
@@ -514,6 +518,7 @@ item ** dir_read_items_status(const char *const path, enum status st) {
         }
         item_entry[DIR_ITEM_ENTRY_LEN] = '\0'; /* Not done by pread */
         items[i] = entry_to_item(item_entry); /* Parse entry data */
+        items[i]->item_st = st; /* Set status */
     }
 
     /* NULL terminate */
@@ -522,9 +527,10 @@ item ** dir_read_items_status(const char *const path, enum status st) {
     return items;
 }
 
-item ** dir_read_all_items(const char *const path) {
-    setup_path_names(path);
-    int total_items = dir_total_items(NULL);
+item ** dir_read_all_items() {
+    setup_path_names(NULL);
+
+    int total_items = dir_total_items();
     /* Array of items */
     item **items = (item **) malloc(sizeof(item *)
                                     * (total_items + 1));
@@ -541,7 +547,7 @@ item ** dir_read_all_items(const char *const path) {
 
     /* Iterate for all status types */
     for (int i = 0; i < ITEM_STATUS_COUNT; i++) {
-        item **items_of_same_st = dir_read_items_status(NULL, (enum status) i);
+        item **items_of_same_st = dir_read_items_status((enum status) i);
 
         /* Copy NULL-terminated pointer array to total collection */
         for (size_t j = 0; (items[items_read] = items_of_same_st[j]) != NULL;
@@ -599,17 +605,17 @@ static void make_item_entry(const item *const itp,
 }
 
 /**
- * @brief Append write the item name of the item pointed to by itp to to the
+ * @brief Append write the item entry of the item pointed to by itp to the
  * appropriate items file
  * @param itp Pointer to item to write data of
  * @param entry Formatted entry of item to write with terminating NULL
  * character
  * @return 0 on success
  * @return -1 on error
- * @note No 'correctness' checks occur to validate that entry indeed represents
- * the item pointed to by itp
+ * @note No 'correctness' checks occur to validate that the entry indeed
+ * represents the item pointed to by itp, this is assumed to be the case
  */
-static int append_item_name(const item *itp,
+static int append_item_entry(const item *itp,
                             const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
     int fd;
     int open_flags = O_APPEND | O_RDWR;
@@ -639,9 +645,9 @@ static int append_item_name(const item *itp,
     return 0;
 }
 
-int dir_append_item(const item *it, const char *path) {
+int dir_append_item(const item *it) {
     assert(it != NULL);
-    setup_path_names(path);
+    setup_path_names(NULL);
 
     /* Additional + 1 allocated for NULL byte */
     char item_entry[DIR_ITEM_ENTRY_LEN + 1] = {'\0'};
@@ -649,8 +655,211 @@ int dir_append_item(const item *it, const char *path) {
     make_item_entry(it, item_entry);
 
     /* Write item data to items file */
-    if (append_item_name(it, item_entry) < 0)
+    if (append_item_entry(it, item_entry) < 0)
         return -1;
     
+    return 0;
+}
+
+/**
+ * @brief Find item offset in file opened by file descriptor fd provided its
+ * ID
+ * @param fd File descriptor of file representing item entries
+ * @param id ID of item to find
+ * @return offset of item in file represented by fd
+ * @return -1 if item does not appear in fd
+ */
+static off_t fd_find_item_id(const int fd, const ssize_t id) {
+    assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
+
+    int total_items = fd_total_items(fd);
+    off_t off = -1;
+    /* + 1 for character parsing */
+    char curr_id_str[sizeof(ssize_t) * 2 + 1];
+
+    for (int i = 0; i < total_items && off < 0; i++) {
+        if (pread(fd, curr_id_str, sizeof(curr_id_str), i * DIR_ITEM_ENTRY_LEN)
+            < 0) {
+            return -1;
+        }
+
+        if (id == (ssize_t) strtoll(curr_id_str, NULL, 16)) /* Check ID */
+            off = i * DIR_ITEM_ENTRY_LEN;
+    }
+
+    return off;
+}
+
+/**
+ * @brief Swap item entries in a file of item entries opened with fd
+ * @param fd File descriptor of open file of item entries
+ * @param off_a First given offset of entry to swap
+ * @param off_b Second given offset of entry to swap
+ * @return 0 on success
+ * @return -1 if offsets are incorrect or in case of some other error
+ * @note Handles case where off_a == off_b
+ */
+static int fd_swap_item_entries_at(const int fd, const off_t off_a,
+                                   const off_t off_b) {
+    assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
+    
+    /* Check proper flags */
+    if ((fcntl(fd, F_GETFL) & O_ACCMODE) != O_RDWR) {
+#ifdef DEBUG
+        log_err("Incorrect fd flag provided");
+#endif
+        return -1;
+    }
+
+    /* Check offsets are valid */
+    off_t total_item_size = fd_total_items(fd) * DIR_ITEM_ENTRY_LEN;
+    /*
+     * NOTE: NULL arg could produce undefined behaviour without previous call
+     * to setup_path_names -- will be amended in future changes
+     */
+
+    if (off_a < 0 || off_a >= total_item_size ||
+        off_b < 0 || off_b >= total_item_size) {
+        return -1;
+    }
+
+    if (off_a == off_b) return 0;
+
+    char temp_entry_a[DIR_ITEM_ENTRY_LEN];
+    char temp_entry_b[DIR_ITEM_ENTRY_LEN];
+
+    /* Read item entries to buffer */
+    if (pread(fd, temp_entry_a, sizeof(temp_entry_a), off_a) < 0 ||
+        pread(fd, temp_entry_b, sizeof(temp_entry_b), off_b) < 0) {
+        return -1;
+    }
+
+    /* Write back in swapped positions */
+    if (pwrite(fd, temp_entry_b, sizeof(temp_entry_b), off_a) < 0 ||
+        pwrite(fd, temp_entry_a, sizeof(temp_entry_a), off_b) < 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Remove item entry at given offset
+ * @param entry_off Offset of entry
+ * @param fd File descriptor of file of item entries in regular format
+ * @return 0 on success
+ * @return -1 on error or if file if opened by fd is empty
+ * @note entry_off must be the offset of the *first* character of the item
+ * entry
+ */
+static int fd_remove_item_entry_at(const off_t entry_off, const int fd) {
+    assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
+    assert(entry_off >= 0);
+
+    /* Swap with last entry */
+    off_t total_file_size = fd_total_items(fd) * DIR_ITEM_ENTRY_LEN;
+    if (entry_off >= total_file_size) {
+#ifdef DEBUG
+        log_err("Entry offset provided too large given item file size");
+#endif
+        return -1;
+    }
+
+    off_t last_entry_off = total_file_size - DIR_ITEM_ENTRY_LEN;
+
+    /* Move entry to end of file */
+    fd_swap_item_entries_at(fd, entry_off, last_entry_off);
+
+    /* Truncate file */
+    if (ftruncate(fd, last_entry_off) < 0) {
+#ifdef DEBUG
+        log_err("Item entry file could not be truncated when removing entry");
+#endif
+        return -1;
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Read item at an offset from fd as a new item struct
+ * @param entry_off Offset of entry
+ * @param fd File descriptor of file of item entries in regular format
+ * @note entry_off must be the offset of the *first* character of the item
+ * entry
+ */
+static item * fd_read_item_at(off_t entry_off, int fd) {
+    assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
+    assert(entry_off >= 0);
+
+    char entry[DIR_ITEM_ENTRY_LEN + 1];
+    entry[DIR_ITEM_ENTRY_LEN] = '\0';
+
+    if (pread(fd, entry, DIR_ITEM_ENTRY_LEN, entry_off) < 0) {
+        return NULL;
+    }
+
+    item *it = entry_to_item(entry);
+
+    return it;
+}
+
+int dir_change_item_status_id(ssize_t id, enum status new_status) {
+    assert(new_status < ITEM_STATUS_COUNT); /* Validate status */
+
+    setup_path_names(NULL);
+
+    int item_fds[_DIR_ITEM_NUM_FILES];
+
+    item *itp = NULL;
+
+    open_items(O_RDWR, item_fds);
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
+        if (item_fds[i] < 0) {
+#ifdef DEBUG
+            log_err("Could not open item files for reading and writing");
+#endif
+            return -1;
+        }
+        /* Find item in project */
+        off_t item_off = fd_find_item_id(item_fds[i], id); 
+
+        if (item_off >= 0) {
+            /* Status is already correct - exit from function */
+            if ((enum status) i == new_status)
+                break;
+
+            int fd = item_fds[i];
+
+            /* Remove item from current location */
+            itp = fd_read_item_at(item_off, fd);
+
+            if (!itp) { /* Could not read item */
+                close_items(item_fds);
+                return -1;
+            }
+
+            fd_remove_item_entry_at(item_off, fd);
+        }
+    }
+
+    /* Item does not exist */
+    if (!itp)
+        return -1;
+
+    /* Update status */
+    itp->item_st = new_status;
+
+    /* Add to new location */
+    /*
+     * FUTURE: Check *where* the item belongs in the file to preserve
+     * order of IDs
+     */
+    dir_append_item(itp);
+
+    close_items(item_fds);
+
+    item_free(itp);
+
     return 0;
 }

@@ -7,8 +7,6 @@
 
 #define ADD_CMD_NAME "add"
 
-extern item it;
-
 /**
  * @brief Show help for add command
  */
