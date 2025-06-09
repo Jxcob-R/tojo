@@ -13,7 +13,14 @@
 extern void add_help(void);
 
 /**
- * @brief add name to item
+ * @brief Restage an existing item as a TODO status from some other status
+ * @param id_str String form of id
+ */
+extern void add_restage_item_id(const char *id_str);
+
+/**
+ * @brief Add name to item
+ * @param name Name of new item to add
  */
 extern void add_item_name(const char *name);
 
