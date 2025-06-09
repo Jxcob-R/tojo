@@ -70,7 +70,7 @@ int add_cmd(const int argc, char * const argv[], const char *proj_path) {
     }
 
     /* ID set to next available number */
-    it.item_id = dir_total_items();
+    it.item_id = dir_next_id();
 
     /* Write added item to appropriate location */
     if (dir_append_item(&it) == -1)

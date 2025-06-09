@@ -7,12 +7,16 @@
 #include "dev-utils/debug-out.h"
 #endif
 
+/* Project directory */
 static char proj_path[_MAX_PATH] =  { '\0' };
 
+/* Item storage */
 static char items_path[_MAX_PATH] = { '\0' };
 static char todo_path[_MAX_PATH] =  { '\0' };
 static char ip_path[_MAX_PATH] =    { '\0' };
 static char done_path[_MAX_PATH] =  { '\0' };
+
+static char next_id_path[_MAX_PATH] = { '\0' }; /* Next available item ID */
 
 /**
  * @brief Set up global path variables to default values if not already done
@@ -38,6 +42,9 @@ static void setup_path_names(const char * const path) {
     if (!*done_path)
         dir_construct_path(items_path, _DIR_ITEM_DONE_F, done_path, _MAX_PATH);
 
+    /* Next ID data */
+    if (!*next_id_path)
+        dir_construct_path(proj_path, _DIR_NEXT_ID_F, next_id_path, _MAX_PATH);
 }
 
 /**
@@ -313,6 +320,15 @@ int dir_init(const char *path) {
     /* Items */
     ret = create_items();
 
+    /* ID */
+    int file_creation = create_file(next_id_path);
+    dir_next_id();
+
+    /* Check file creation */
+    if (file_creation != 0) {
+        ret = -1;
+    }
+
     return ret;
 }
 
@@ -437,6 +453,71 @@ int dir_total_items() {
     close_items(item_fds);
 
     return num_items;
+}
+
+/**
+ * @brief Increment the next available ID in the NEXT_ID file
+ * @param fd_next_id File descriptor open with read and write permissions for
+ * next ID file.
+ * @return Current ID (the one replaced)
+ * @return -1 on error
+ */
+static ssize_t increment_next_id(int fd_next_id, int id_hex_width) {
+    assert((fcntl(fd_next_id, F_GETFL) & O_ACCMODE) == O_RDWR);
+
+
+    char curr_id_hex_str[2 * sizeof(ssize_t) + 1];
+    char next_id_hex_str[2 * sizeof(ssize_t) + 1];
+
+    curr_id_hex_str[2 * sizeof(ssize_t)] = '\0'; /* Null terminate */
+    next_id_hex_str[2 * sizeof(ssize_t)] = '\0';
+
+    if (read(fd_next_id, curr_id_hex_str, 2 * sizeof(ssize_t)) < 0) {
+        close(fd_next_id);
+        return -1;
+    }
+
+    ssize_t curr_id = (ssize_t) strtoll(curr_id_hex_str, NULL, 16);
+
+    snprintf(next_id_hex_str, sizeof(next_id_hex_str), "%0*zX",
+             id_hex_width, curr_id + 1);
+
+    if (pwrite(fd_next_id, next_id_hex_str, 2 * sizeof(ssize_t), 0) < 0) {
+        close(fd_next_id);
+        return -1;
+    }
+
+    ftruncate(fd_next_id, id_hex_width);
+
+    return curr_id;
+}
+
+ssize_t dir_next_id() {
+    setup_path_names(NULL);
+
+    const int fd_id = open(next_id_path, O_RDWR);
+
+    struct stat sb;
+    if (fstat(fd_id, &sb) < 0) {
+        close(fd_id);
+        return -2;
+    }
+
+    const unsigned int long_hex_width = (unsigned int) sizeof(ssize_t) * 2;
+
+    if (sb.st_size == 0) {
+        /* Initialise project */
+        for (unsigned int i = 0; i < long_hex_width; i++)
+            write(fd_id, "0", 1);
+        close(fd_id);
+        return -1;
+    }
+
+    /* Increment next available ID */
+    ssize_t curr_id = increment_next_id(fd_id, long_hex_width);
+
+    close(fd_id);
+    return curr_id;
 }
 
 /**
@@ -804,7 +885,7 @@ static item * fd_read_item_at(off_t entry_off, int fd) {
     return it;
 }
 
-int dir_change_item_status_id(ssize_t id, enum status new_status) {
+int dir_change_item_status_id(const ssize_t id, const enum status new_status) {
     assert(new_status < ITEM_STATUS_COUNT); /* Validate status */
 
     setup_path_names(NULL);

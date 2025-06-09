@@ -40,6 +40,8 @@
 
 #define _DIR_ITEM_NUM_FILES 3 /* Number of item files categorised */
 
+#define _DIR_NEXT_ID_F "NEXT_ID"    /* Next available item ID */
+
 /**
  * Special characters/tokens (for item entry)
  * @note _LEN = strlen(...) or equivalent
@@ -109,6 +111,16 @@ extern item * dir_find_item(const char *name);
 extern int dir_total_items();
 
 /**
+ * @brief Get next available item ID, this call also changes the next available
+ * ID so it is assumed that the ID retrieved is then used for an new item
+ * @return Next available item ID for project
+ * @return If called on new project, ID of -1 is returned, subsequent calls will
+ * index from 0
+ * @return -2 on error
+ */
+extern ssize_t dir_next_id();
+
+/**
  * @brief Read items of a single given status
  * @param st Status of items to read
  * @return NULL-terminated array of item pointers allocated on the heap
@@ -139,5 +151,6 @@ extern int dir_append_item(const item *it);
  * @return 0 if item status change was succesful
  * @return -1 if item status could not be changed
  */
-extern int dir_change_item_status_id(ssize_t id, enum status new_status);
+extern int dir_change_item_status_id(const ssize_t id,
+                                     const enum status new_status);
 #endif
