@@ -26,4 +26,8 @@
 #define RET_UNABLE_TO_INIT 5
 #define RET_NO_PROJ 6
 
+/* Directory search macros */
+#define MAX_PATH 4096
+#define MAX_PATH_LVLS 128
+
 #endif

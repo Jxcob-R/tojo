@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
         printf("Unknown usage of %s\n", argv[0]);
         tj_help();
 #ifdef DEBUG
-        return print_return(TJ_RET_NO_ARGS);
+        return print_return(RET_NO_ARGS);
 #else
         return RET_NO_ARGS;
 #endif

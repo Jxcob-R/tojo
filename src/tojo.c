@@ -91,7 +91,7 @@ int tj_main(const int argc, char * const argv[]) {
     }
 
     /* Find TJ project directory */
-    char proj_dir[_MAX_PATH];
+    char proj_dir[MAX_PATH];
     if (dir_find_project(proj_dir) != 0) {
 #ifdef DEBUG
         log_err("Not inside a project");

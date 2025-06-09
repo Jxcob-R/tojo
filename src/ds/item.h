@@ -27,7 +27,7 @@ struct item {
     /*
      * Future additions
      * File or directory target name in project -- relative to project root
-    char item_target[_MAX_PATH];
+    char item_target[MAX_PATH];
      * Date and time item was last changed
     time_t item_time;
      * Priority of an item
