@@ -6,6 +6,7 @@
 #include "cmds/add.h"
 #include "cmds/init.h"
 #include "cmds/list.h"
+#include "cmds/resolve.h"
 #include "cmds/work.h"
 
 #ifdef DEBUG
@@ -34,6 +35,7 @@ static const struct cmd tj_cmds[] = {
     {INIT_CMD_NAME, init_cmd},     /* Project initialisation */
     {LIST_CMD_NAME, list_cmd},     /* List items */
     {WORK_CMD_NAME, work_cmd},     /* Commence work on an item */
+    {RES_CMD_NAME,  res_cmd},     /* Commence work on an item */
     {NULL, NULL}
 };
 
