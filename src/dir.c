@@ -1,6 +1,5 @@
 #include "dir.h"
 #include "config.h"
-#include "tojo.h"
 #include "ds/item.h"
 
 #ifdef DEBUG
@@ -8,15 +7,15 @@
 #endif
 
 /* Project directory */
-static char proj_path[_MAX_PATH] =  { '\0' };
+static char proj_path[MAX_PATH] =  { '\0' };
 
 /* Item storage */
-static char items_path[_MAX_PATH] = { '\0' };
-static char todo_path[_MAX_PATH] =  { '\0' };
-static char ip_path[_MAX_PATH] =    { '\0' };
-static char done_path[_MAX_PATH] =  { '\0' };
+static char items_path[MAX_PATH] = { '\0' };
+static char todo_path[MAX_PATH] =  { '\0' };
+static char ip_path[MAX_PATH] =    { '\0' };
+static char done_path[MAX_PATH] =  { '\0' };
 
-static char next_id_path[_MAX_PATH] = { '\0' }; /* Next available item ID */
+static char next_id_path[MAX_PATH] = { '\0' }; /* Next available item ID */
 
 /**
  * @brief Set up global path variables to default values if not already done
@@ -32,19 +31,19 @@ static void setup_path_names(const char * const path) {
 
     /* Set up items path */
     if (!*items_path)
-        dir_construct_path(proj_path, _DIR_ITEM_PATH_D, items_path, _MAX_PATH);
+        dir_construct_path(proj_path, _DIR_ITEM_PATH_D, items_path, MAX_PATH);
 
     /* Item file names */
     if (!*todo_path)
-        dir_construct_path(items_path, _DIR_ITEM_TODO_F, todo_path, _MAX_PATH);
+        dir_construct_path(items_path, _DIR_ITEM_TODO_F, todo_path, MAX_PATH);
     if (!*ip_path)
-        dir_construct_path(items_path, _DIR_ITEM_INPROG_F, ip_path, _MAX_PATH);
+        dir_construct_path(items_path, _DIR_ITEM_INPROG_F, ip_path, MAX_PATH);
     if (!*done_path)
-        dir_construct_path(items_path, _DIR_ITEM_DONE_F, done_path, _MAX_PATH);
+        dir_construct_path(items_path, _DIR_ITEM_DONE_F, done_path, MAX_PATH);
 
     /* Next ID data */
     if (!*next_id_path)
-        dir_construct_path(proj_path, _DIR_NEXT_ID_F, next_id_path, _MAX_PATH);
+        dir_construct_path(proj_path, _DIR_NEXT_ID_F, next_id_path, MAX_PATH);
 }
 
 /**
@@ -216,13 +215,13 @@ static void build_relative_path(char *dest, int levels_up,
  */
 static int find_target_directory(const char *start_path, const char *home_dir, 
                                  const char *target_dir, int *levels_up) {
-    char search_path[_MAX_PATH];
-    char test_path[_MAX_PATH + sizeof(CONF_PROJ_DIR)];
+    char search_path[MAX_PATH];
+    char test_path[MAX_PATH + sizeof(CONF_PROJ_DIR)];
     
     strcpy(search_path, start_path);
     *levels_up = 0;
     
-    while (*levels_up < _MAX_PATH_LVLS) {
+    while (*levels_up < MAX_PATH_LVLS) {
         /* Check if we've reached the home directory (exclusive) */
         if (strcmp(search_path, home_dir) == 0) {
             return -1;
@@ -251,7 +250,7 @@ static int find_target_directory(const char *start_path, const char *home_dir,
 int dir_find_project(char *dir) {
     assert(dir);
     
-    char cwd[_MAX_PATH];
+    char cwd[MAX_PATH];
     char *home_dir;
     int levels_up;
     

@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 /* Version as a string */
-#define CONF_VERSION "0.1"
+#define CONF_VERSION "0.2"
 
 /* Name definitions */
 #define CONF_NAME_LOWER "tojo"
@@ -25,5 +25,9 @@
 #define RET_INIT_TJ_EXISTS 4
 #define RET_UNABLE_TO_INIT 5
 #define RET_NO_PROJ 6
+
+/* Directory search macros */
+#define MAX_PATH 4096
+#define MAX_PATH_LVLS 128
 
 #endif
