@@ -10,13 +10,18 @@
 
 #define ITEM_NAME_MAX 256 /* Maximum item name length */
 
+/**
+ * Signed item ID type
+ */
+typedef int32_t sitem_id; // TODO: Change to signed 32-bit (?) int type
+
 typedef struct item item;
 
 /**
  * @brief Struct of a single todo item
  */
 struct item {
-    ssize_t item_id;
+    sitem_id item_id;
     char *item_name;
     enum status {
         TODO,

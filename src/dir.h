@@ -58,7 +58,7 @@
 /* Item entry format */
 #define DIR_ITEM_ENTRY_LEN \
     ( /* Item ID */ \
-    sizeof(ssize_t)*2 + _DIR_ITEM_FIELD_DELIM_LEN \
+    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
     + /* Item name */ \
     ITEM_NAME_MAX + _DIR_ITEM_DELIM_LEN \
 )
@@ -119,7 +119,7 @@ extern int dir_total_items();
  * index from 0
  * @return -2 on error
  */
-extern ssize_t dir_next_id();
+extern sitem_id dir_next_id();
 
 /**
  * @brief Read items of a single given status
@@ -152,6 +152,6 @@ extern int dir_append_item(const item *it);
  * @return 0 if item status change was succesful
  * @return -1 if item status could not be changed
  */
-extern int dir_change_item_status_id(const ssize_t id,
+extern int dir_change_item_status_id(const sitem_id id,
                                      const enum status new_status);
 #endif

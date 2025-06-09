@@ -1,6 +1,7 @@
 #include "dir.h"
 #include "config.h"
 #include "ds/item.h"
+#include <string.h>
 
 #ifdef DEBUG
 #include "dev-utils/debug-out.h"
@@ -461,37 +462,37 @@ int dir_total_items() {
  * @return Current ID (the one replaced)
  * @return -1 on error
  */
-static ssize_t increment_next_id(int fd_next_id, int id_hex_width) {
+static sitem_id increment_next_id(int fd_next_id) {
     assert((fcntl(fd_next_id, F_GETFL) & O_ACCMODE) == O_RDWR);
 
 
-    char curr_id_hex_str[2 * sizeof(ssize_t) + 1];
-    char next_id_hex_str[2 * sizeof(ssize_t) + 1];
+    char curr_id_hex_str[HEX_LEN(sitem_id) + 1];
+    char next_id_hex_str[HEX_LEN(sitem_id) + 1];
 
-    curr_id_hex_str[2 * sizeof(ssize_t)] = '\0'; /* Null terminate */
-    next_id_hex_str[2 * sizeof(ssize_t)] = '\0';
+    curr_id_hex_str[HEX_LEN(sitem_id)] = '\0'; /* Null terminate */
+    next_id_hex_str[HEX_LEN(sitem_id)] = '\0';
 
-    if (read(fd_next_id, curr_id_hex_str, 2 * sizeof(ssize_t)) < 0) {
+    if (read(fd_next_id, curr_id_hex_str, HEX_LEN(sitem_id)) < 0) {
         close(fd_next_id);
         return -1;
     }
 
-    ssize_t curr_id = (ssize_t) strtoll(curr_id_hex_str, NULL, 16);
+    sitem_id curr_id = (sitem_id) strtoll(curr_id_hex_str, NULL, 16);
 
-    snprintf(next_id_hex_str, sizeof(next_id_hex_str), "%0*zX",
-             id_hex_width, curr_id + 1);
+    snprintf(next_id_hex_str, sizeof(next_id_hex_str), "%0*X",
+             (int) HEX_LEN(sitem_id), curr_id + 1);
 
-    if (pwrite(fd_next_id, next_id_hex_str, 2 * sizeof(ssize_t), 0) < 0) {
+    if (pwrite(fd_next_id, next_id_hex_str, 2 * sizeof(sitem_id), 0) < 0) {
         close(fd_next_id);
         return -1;
     }
 
-    ftruncate(fd_next_id, id_hex_width);
+    ftruncate(fd_next_id, HEX_LEN(sitem_id));
 
     return curr_id;
 }
 
-ssize_t dir_next_id() {
+sitem_id dir_next_id() {
     setup_path_names(NULL);
 
     const int fd_id = open(next_id_path, O_RDWR);
@@ -502,18 +503,21 @@ ssize_t dir_next_id() {
         return -2;
     }
 
-    const unsigned int long_hex_width = (unsigned int) sizeof(ssize_t) * 2;
+    char start_index[HEX_LEN(sitem_id) + 1];
+    memset(start_index, '0', sizeof(start_index) - 1);
+    start_index[sizeof(start_index) - 1] = '\0'; /* Null terminate */
 
     if (sb.st_size == 0) {
-        /* Initialise project */
-        for (unsigned int i = 0; i < long_hex_width; i++)
-            write(fd_id, "0", 1);
+        int ret = -1;
+        /* Initialise project with start_index */
+        if (write(fd_id, start_index, sizeof(start_index) - 1) < 0)
+            ret = -2; /* Error case */
         close(fd_id);
-        return -1;
+        return ret;
     }
 
     /* Increment next available ID */
-    ssize_t curr_id = increment_next_id(fd_id, long_hex_width);
+    sitem_id curr_id = increment_next_id(fd_id);
 
     close(fd_id);
     return curr_id;
@@ -536,10 +540,10 @@ item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
      * Delimiter is guaranteed not to be a valid hex digit
      */
     const char *id = &entry[0];
-    item->item_id = (ssize_t) strtoll(id, NULL, 16);
+    item->item_id = (sitem_id) strtoll(id, NULL, 16);
 
     /* Parse item name */
-    const char *name = &entry[sizeof(ssize_t) * 2 + _DIR_ITEM_FIELD_DELIM_LEN];
+    const char *name = &entry[sizeof(sitem_id) * 2 + _DIR_ITEM_FIELD_DELIM_LEN];
 
     int name_len = ITEM_NAME_MAX;
 
@@ -660,14 +664,14 @@ static void make_item_entry(const item *const itp,
     const char term[_DIR_ITEM_DELIM_LEN + 1] = _DIR_ITEM_DELIM;
 
     /* Width of int in hex -- required for variable width format printing */
-    const unsigned int long_hex_width = (unsigned int) sizeof(ssize_t) * 2;
+    const unsigned int long_hex_width = (unsigned int) sizeof(sitem_id) * 2;
 
     /* Bytes printed to buf */
     int b = 0;
 
     /* Parse item data */
     b = snprintf(buf, DIR_ITEM_ENTRY_LEN + 1,
-                 "%0*zX%s%-*s%s",
+                 "%0*X%s%-*s%s",
                  /* Width and value of ID */
                  long_hex_width, itp->item_id,
                  delim,
@@ -749,13 +753,13 @@ int dir_append_item(const item *it) {
  * @return offset of item in file represented by fd
  * @return -1 if item does not appear in fd
  */
-static off_t fd_find_item_id(const int fd, const ssize_t id) {
+static off_t fd_find_item_id(const int fd, const sitem_id id) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
 
     int total_items = fd_total_items(fd);
     off_t off = -1;
     /* + 1 for character parsing */
-    char curr_id_str[sizeof(ssize_t) * 2 + 1];
+    char curr_id_str[sizeof(sitem_id) * 2 + 1];
 
     for (int i = 0; i < total_items && off < 0; i++) {
         if (pread(fd, curr_id_str, sizeof(curr_id_str), i * DIR_ITEM_ENTRY_LEN)
@@ -763,7 +767,7 @@ static off_t fd_find_item_id(const int fd, const ssize_t id) {
             return -1;
         }
 
-        if (id == (ssize_t) strtoll(curr_id_str, NULL, 16)) /* Check ID */
+        if (id == (sitem_id) strtoll(curr_id_str, NULL, 16)) /* Check ID */
             off = i * DIR_ITEM_ENTRY_LEN;
     }
 
@@ -884,7 +888,7 @@ static item * fd_read_item_at(off_t entry_off, int fd) {
     return it;
 }
 
-int dir_change_item_status_id(const ssize_t id, const enum status new_status) {
+int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
     assert(new_status < ITEM_STATUS_COUNT); /* Validate status */
 
     setup_path_names(NULL);

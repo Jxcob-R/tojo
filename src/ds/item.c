@@ -41,7 +41,7 @@ void item_set_name_deep(item *itp, const char *const name, const size_t len) {
 void item_print_fancy(item *itp, long long print_flags) {
     if (print_flags & ITEM_PRINT_ID) {
         /* ID */
-        printf(_ITEM_PRINT_ID_COL "%ld\t" _ITEM_PRINT_RESET_COL, itp->item_id);
+        printf(_ITEM_PRINT_ID_COL "%d\t" _ITEM_PRINT_RESET_COL, itp->item_id);
     }
     if (print_flags & ITEM_PRINT_NAME) {
         /* Name */
