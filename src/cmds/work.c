@@ -35,7 +35,7 @@ void work_help() {
 void work_on_item_id(const char * id_str) {
     assert(id_str);
 
-    sitem_id id = strtoll(id_str, NULL, 16);
+    sitem_id id = strtoll(id_str, NULL, 10);
 
     dir_change_item_status_id(id, IN_PROG);
 }
