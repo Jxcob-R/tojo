@@ -33,13 +33,15 @@ static const struct opt_fn add_option_fns[] = {
 static item it = {-1, (char[ITEM_NAME_MAX]) {"\0"}, TODO};
 
 void add_help() {
-    printf("%s %s - add todo item for staging\n",
+    printf("%s %s - add todo item to project\n",
            CONF_NAME_UPPER,
            ADD_CMD_NAME);
-    printf("usage: %s %s ...\n", CONF_CMD_NAME, ADD_CMD_NAME);
+    printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, ADD_CMD_NAME);
     printf("\n");
-    printf("Documentation and usage code to be provided for %s\n",
-           ADD_CMD_NAME);
+    printf("\t-n, --name\tAdd item by name\n");
+    printf("\t-r, --restage\tRestage an already item existing by its item ID\
+            \n");
+    printf("\t-h, --help\tBring up this help page\n");
 }
 
 void add_restage_item_id(const char *id_str) {

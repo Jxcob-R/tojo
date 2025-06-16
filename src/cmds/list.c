@@ -22,13 +22,13 @@ static const struct opt_fn list_option_fns[] = {
 const char *path;
 
 void list_help() {
-    printf("%s %s - list todo item for staging\n",
+    printf("%s %s - list items in project\n",
            CONF_NAME_UPPER,
            LIST_CMD_NAME);
-    printf("usage: %s %s ...\n", CONF_CMD_NAME, LIST_CMD_NAME);
+    printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, LIST_CMD_NAME);
     printf("\n");
-    printf("Documentation and usage code to be provided for %s\n",
-           LIST_CMD_NAME);
+    printf("\t-a, --all\tList all current tasks in project\n");
+    printf("\t-h, --help\tBring up this help page\n");
 }
 
 void list_all_names() {

@@ -26,10 +26,11 @@ void work_help() {
     printf("%s %s - work todo item for staging\n",
            CONF_NAME_UPPER,
            WORK_CMD_NAME);
-    printf("usage: %s %s ...\n", CONF_CMD_NAME, WORK_CMD_NAME);
+    printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, WORK_CMD_NAME);
     printf("\n");
-    printf("Documentation and usage code to be provided for %s\n",
-           WORK_CMD_NAME);
+    printf("\t-i, --id\tMove item with specified ID to in progress; "
+                        "item may have any state\n");
+    printf("\t-h, --help\tBring up this help page\n");
 }
 
 void work_on_item_id(const char * id_str) {

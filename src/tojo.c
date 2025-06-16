@@ -54,9 +54,20 @@ static const struct cmd * get_cmd(char *name) {
 
 void tj_help() {
     printf("%s - Terminal TOdo JOtter:\n", CONF_NAME_UPPER);
-    printf("usage: %s ...\n", CONF_CMD_NAME);
+    printf("A CLI to-do tool that can help you track project progress"\
+           "locally");
+    printf("usage: %s [<options>]\n", CONF_CMD_NAME);
     printf("\n");
-    printf("Documentation and usage code to be provided\n");
+    printf("\t-h, --help\tBring up this help page\n");
+    printf("\n");
+    printf("usage: %s <command>\n", CONF_CMD_NAME);
+    printf("\tinit\tInitialise project\n");
+    printf("\tadd\tAdd items to project\n");
+    printf("\tres\tResolve open items\n");
+    printf("\twork\tMark items as in-progress\n");
+    printf("\tlist\tList items in project\n");
+    printf("\n");
+    printf("See more details of each command in individual help pages");
 }
 
 void tj_print_vers() {
