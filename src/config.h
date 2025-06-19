@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 /* Version as a string */
-#define CONF_VERSION "0.2"
+#define CONF_VERSION "0.3"
 
 /* Name definitions */
 #define CONF_NAME_LOWER "tojo"
