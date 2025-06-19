@@ -63,6 +63,9 @@
     ITEM_NAME_MAX + _DIR_ITEM_DELIM_LEN \
 )
 
+/* Other macros */
+#define OFF_T_MIN ((off_t)(((off_t)1) << (sizeof(off_t) * 8 - 1)))
+
 /**
  * @brief Check if directory is a current project
  * @param dir Write relative project  directory to dir if it exists, leave

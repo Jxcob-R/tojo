@@ -1,7 +1,6 @@
 #include "dir.h"
 #include "config.h"
 #include "ds/item.h"
-#include <string.h>
 
 #ifdef DEBUG
 #include "dev-utils/debug-out.h"
@@ -339,7 +338,7 @@ int dir_init(const char *path) {
  * @return NULL if no matching item is found
  * @see item_init, item_free
  */
-static item * fd_read_item(const char *name, const int fd) {
+static item * fd_read_item(const int fd, const char *name) {
     assert(name); /* Name exists */
     assert(fd > 0); /* Valid file descriptor */
     /* Has read perms */
@@ -375,6 +374,67 @@ static item * fd_read_item(const char *name, const int fd) {
     return NULL;
 }
 
+/**
+ * @brief Read an item entry and return all readable data in a freshly
+ * allocated item.
+ * @param entry Single entry representing item
+ * @return Pointer to new item
+ * @return NULL in case of error
+ * @note Any data that cannot be ascertained from the entry will correspond
+ * @see free
+ */
+item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
+    item *item = item_init();
+
+    /*
+     * Parse item ID
+     * Delimiter is guaranteed not to be a valid hex digit
+     */
+    const char *id = &entry[0];
+    item->item_id = (sitem_id) strtoll(id, NULL, 16);
+
+    /* Parse item name */
+    const char *name = &entry[sizeof(sitem_id) * 2 + _DIR_ITEM_FIELD_DELIM_LEN];
+
+    int name_len = ITEM_NAME_MAX;
+
+    /* Find true length of name */
+    for (int i = ITEM_NAME_MAX - 1; i > 0; i--) {
+        if (name[i] != ' ') { /* Filler character is ' ', may be modified */
+            name_len = i + 2;
+            break;
+        }
+    }
+
+    /* See item_set_name_deep for null termination expectations */
+    item_set_name_deep(item, name, name_len);
+
+    return item;
+}
+
+/**
+ * @brief Read item at an offset from fd as a new item struct
+ * @param entry_off Offset of entry
+ * @param fd File descriptor of file of item entries in regular format
+ * @return item with data in entries file, heap allocated
+ * @note entry_off must be the offset of the *first* byte of the item entry
+ */
+static item * fd_read_item_at(int fd, off_t entry_off) {
+    assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
+    assert(entry_off >= 0);
+
+    char entry[DIR_ITEM_ENTRY_LEN + 1];
+    entry[DIR_ITEM_ENTRY_LEN] = '\0';
+
+    if (pread(fd, entry, DIR_ITEM_ENTRY_LEN, entry_off) < 0) {
+        return NULL;
+    }
+
+    item *it = entry_to_item(entry);
+
+    return it;
+}
+
 item * dir_find_item(const char *name) {
     setup_path_names(NULL);
 
@@ -396,7 +456,7 @@ item * dir_find_item(const char *name) {
     item *itp = NULL;
 
     for (int i = 0; i < _DIR_ITEM_NUM_FILES && !itp; i++)
-        itp = fd_read_item(name, item_fds[i]);
+        itp = fd_read_item(item_fds[i], name);
 
 #ifdef DEBUG
     if (itp == NULL) {
@@ -521,44 +581,6 @@ sitem_id dir_next_id() {
 
     close(fd_id);
     return curr_id;
-}
-
-/**
- * @brief Read an item entry and return all readable data in a freshly
- * allocated item.
- * @param entry Single entry representing item
- * @return Pointer to new item
- * @return NULL in case of error
- * @note Any data that cannot be ascertained from the entry will correspond
- * @see free
- */
-item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
-    item *item = item_init();
-
-    /*
-     * Parse item ID
-     * Delimiter is guaranteed not to be a valid hex digit
-     */
-    const char *id = &entry[0];
-    item->item_id = (sitem_id) strtoll(id, NULL, 16);
-
-    /* Parse item name */
-    const char *name = &entry[sizeof(sitem_id) * 2 + _DIR_ITEM_FIELD_DELIM_LEN];
-
-    int name_len = ITEM_NAME_MAX;
-
-    /* Find true length of name */
-    for (int i = ITEM_NAME_MAX - 1; i > 0; i--) {
-        if (name[i] != ' ') { /* Filler character is ' ', may be modified */
-            name_len = i + 2;
-            break;
-        }
-    }
-
-    /* See item_set_name_deep for null termination expectations */
-    item_set_name_deep(item, name, name_len);
-
-    return item;
 }
 
 item ** dir_read_items_status(enum status st) {
@@ -689,89 +711,91 @@ static void make_item_entry(const item *const itp,
 }
 
 /**
- * @brief Append write the item entry of the item pointed to by itp to the
- * appropriate items file
- * @param itp Pointer to item to write data of
- * @param entry Formatted entry of item to write with terminating NULL
- * character
- * @return 0 on success
- * @return -1 on error
- * @note No 'correctness' checks occur to validate that the entry indeed
- * represents the item pointed to by itp, this is assumed to be the case
+ * @brief Helper for fd_search_for_entry -- does not assert invariants and is
+ * therefore potentially dangerous to use in other contexts
+ * @return >= 0 offset if item found 
+ * @return < 0 offset if item is not found - position of where it *should* be
+ * @note Does not deal with empty file case
  */
-static int append_item_entry(const item *itp,
-                            const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
-    int fd;
-    int open_flags = O_APPEND | O_RDWR;
+static off_t _fd_bin_search_entry(const int fd, const sitem_id target,
+                                   off_t start, off_t end) {
+    off_t middle = (start + end) / 2 -
+                    /* Align to item entry offset */
+                    (((start + end) / 2) % DIR_ITEM_ENTRY_LEN);
 
-    switch (itp->item_st) {
-    case TODO:
-        fd = open(todo_path, open_flags);
-        break;
-    case IN_PROG:
-        fd = open(ip_path, open_flags);
-        break;
-    case DONE:
-        fd = open(done_path, open_flags);
-        break;
-#ifdef DEBUG
-    default:
-        log_err("Attempting to write item with an invalid state");
-#endif
+    /* This may cause some overhead in *very* large projects; future concern */
+    item *start_item = fd_read_item_at(fd, start);
+    item *mid_item = fd_read_item_at(fd, middle);
+    item *end_item = fd_read_item_at(fd, end);
+
+    sitem_id sid = start_item->item_id;
+    sitem_id mid = mid_item->item_id;
+    sitem_id eid = end_item->item_id;
+
+    item_free(start_item);
+    item_free(mid_item);
+    item_free(end_item);
+
+    /* Found cases */
+    if (sid == target)
+        return start;
+    if (eid == target)
+        return end;
+    if (start == end && sid == target)
+        return start;
+
+    /* 'Out of bounds' cases */
+    if (sid > target) {
+        if (start == 0)
+            return OFF_T_MIN; /* "-0" case */
+        return -start;
+    }
+    if (eid < target) {
+        return -(end + DIR_ITEM_ENTRY_LEN);
+    } if (end - start == DIR_ITEM_ENTRY_LEN) {
+        /* Item should be between two others */
+        return -end;
     }
 
-    /* Avoid writing NULL-byte */
-    if (write(fd, entry, DIR_ITEM_ENTRY_LEN) < 0)
-        return -1;
+    if (mid < target)
+        start = middle;
+    else
+        end = middle;
 
-    syncfs(fd);
-
-    return 0;
-}
-
-int dir_append_item(const item *it) {
-    assert(it != NULL);
-    setup_path_names(NULL);
-
-    /* Additional + 1 allocated for NULL byte */
-    char item_entry[DIR_ITEM_ENTRY_LEN + 1] = {'\0'};
-
-    make_item_entry(it, item_entry);
-
-    /* Write item data to items file */
-    if (append_item_entry(it, item_entry) < 0)
-        return -1;
-    
-    return 0;
+    return _fd_bin_search_entry(fd, target, start, end);
 }
 
 /**
- * @brief Find item offset in file opened by file descriptor fd provided its
- * ID
- * @param fd File descriptor of file representing item entries
- * @param id ID of item to find
- * @return offset of item in file represented by fd
- * @return -1 if item does not appear in fd
+ * @brief Search for an entry in a file, regardless of whether it exists or not
+ * @param fd Open file descriptor 
+ * @param target_id Target item ID to find
+ * @return >= 0: offset of location of item with target_id in fd;
+ * @return < 0: offset of location that an item with target_id *would be*,
+ * since "-0" is obviously indistinguishable from 0, OFF_T_MIN represents a
+ * 'would-be' insertion offset of 0; this is always returned for an empty file.
+ * @return -1 on error (guaranteed not to align with a valid 'negative offset'
  */
-static off_t fd_find_item_id(const int fd, const sitem_id id) {
-    assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
+static off_t fd_search_for_entry(const int fd, const sitem_id target_id) {
+    /* Conduct binary search on open fd */
+    assert(fcntl(fd, F_GETFD) != -1);
+    int flags = fcntl(fd, F_GETFL) & O_ACCMODE;
 
-    int total_items = fd_total_items(fd);
-    off_t off = -1;
-    /* + 1 for character parsing */
-    char curr_id_str[sizeof(sitem_id) * 2 + 1];
-
-    for (int i = 0; i < total_items && off < 0; i++) {
-        if (pread(fd, curr_id_str, sizeof(curr_id_str), i * DIR_ITEM_ENTRY_LEN)
-            < 0) {
-            return -1;
-        }
-
-        if (id == (sitem_id) strtoll(curr_id_str, NULL, 16)) /* Check ID */
-            off = i * DIR_ITEM_ENTRY_LEN;
+    if (flags != O_RDWR && flags != O_RDONLY) {
+#ifdef DEBUG
+        log_err("Incorrect fd flag provided");
+#endif
+        return -1;
     }
+    if (target_id < 0) return -1;
 
-    return off;
+    off_t last_off = (fd_total_items(fd) - 1) * DIR_ITEM_ENTRY_LEN;
+
+    /* Empty file */
+    if (last_off < 0)
+        return OFF_T_MIN;
+
+    /* Commence search on whole file */
+    return _fd_bin_search_entry(fd, target_id, 0, last_off);
 }
 
 /**
@@ -828,34 +852,115 @@ static int fd_swap_item_entries_at(const int fd, const off_t off_a,
 }
 
 /**
+ * @brief Append write the item entry of the item pointed to by itp to the
+ * appropriate items file
+ * @param itp Pointer to item to write data of
+ * @param entry Formatted entry of item to write with terminating NULL
+ * character
+ * @return 0 on success
+ * @return -1 on error
+ * @note No 'correctness' checks occur to validate that the entry indeed
+ * represents the item pointed to by itp, this is assumed to be the case
+ */
+static int append_item_entry(const item *itp,
+                             const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
+    int fd;
+    int open_flags = O_RDWR;
+
+    switch (itp->item_st) {
+    case TODO:
+        fd = open(todo_path, open_flags);
+        break;
+    case IN_PROG:
+        fd = open(ip_path, open_flags);
+        break;
+    case DONE:
+        fd = open(done_path, open_flags);
+        break;
+#ifdef DEBUG
+    default:
+        log_err("Attempting to write item with an invalid state");
+#endif
+    }
+
+    /* Ensure that the new item is placed in order */
+    off_t new_item_pos = fd_search_for_entry(fd, itp->item_id);
+    assert(new_item_pos < 0);
+    /* Make non-negative */
+    new_item_pos = (new_item_pos == OFF_T_MIN) ? 0 : -new_item_pos;
+
+    char replaced_entry[DIR_ITEM_ENTRY_LEN];
+
+    /* Read replaced entry */
+    if (pread(fd, replaced_entry, sizeof(replaced_entry), new_item_pos) < 0) {
+        return -1;
+    }
+    off_t eof_pos = lseek(fd, 0, SEEK_END);
+    /* Append replaced entry */
+    if (pwrite(fd, replaced_entry, sizeof(replaced_entry), eof_pos) < 0) {
+        return -1;
+    }
+    /* Write new entry in old position */
+    if (pwrite(fd, entry, sizeof(replaced_entry), new_item_pos) < 0) {
+        return -1;
+    }
+
+    /* Bubble old entry back up */
+    for (off_t i = (fd_total_items(fd) - 1) * DIR_ITEM_ENTRY_LEN;
+        i > new_item_pos + (off_t) DIR_ITEM_ENTRY_LEN; i -= DIR_ITEM_ENTRY_LEN)
+    {
+        fd_swap_item_entries_at(fd, i, i - DIR_ITEM_ENTRY_LEN);
+    }
+    syncfs(fd);
+    return 0;
+}
+
+int dir_append_item(const item *it) {
+    assert(it != NULL);
+    setup_path_names(NULL);
+
+    /* Additional + 1 allocated for NULL byte */
+    char item_entry[DIR_ITEM_ENTRY_LEN + 1] = {'\0'};
+
+    make_item_entry(it, item_entry);
+
+    /* Write item data to items file */
+    if (append_item_entry(it, item_entry) < 0)
+        return -1;
+    
+    return 0;
+}
+
+/**
  * @brief Remove item entry at given offset
- * @param entry_off Offset of entry
  * @param fd File descriptor of file of item entries in regular format
+ * @param entry_off Offset of entry
  * @return 0 on success
  * @return -1 on error or if file if opened by fd is empty
  * @note entry_off must be the offset of the *first* character of the item
  * entry
+ * @note Preserve ordering of entries (besides removed one, obviously)
  */
-static int fd_remove_item_entry_at(const off_t entry_off, const int fd) {
+static int fd_remove_item_entry_at(const int fd, const off_t entry_off) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
     assert(entry_off >= 0);
 
-    /* Swap with last entry */
-    off_t total_file_size = fd_total_items(fd) * DIR_ITEM_ENTRY_LEN;
-    if (entry_off >= total_file_size) {
+    off_t last_off = (fd_total_items(fd) - 1) * DIR_ITEM_ENTRY_LEN;
+    if (entry_off > last_off) {
 #ifdef DEBUG
         log_err("Entry offset provided too large given item file size");
 #endif
         return -1;
     }
 
-    off_t last_entry_off = total_file_size - DIR_ITEM_ENTRY_LEN;
-
-    /* Move entry to end of file */
-    fd_swap_item_entries_at(fd, entry_off, last_entry_off);
+    /* Bubble entry to end of file */
+    for (off_t i_off = entry_off; i_off < last_off;
+         i_off += DIR_ITEM_ENTRY_LEN) {
+        fd_swap_item_entries_at(fd, i_off, i_off + DIR_ITEM_ENTRY_LEN);
+    }
 
     /* Truncate file */
-    if (ftruncate(fd, last_entry_off) < 0) {
+    if (ftruncate(fd, last_off) < 0) {
 #ifdef DEBUG
         log_err("Item entry file could not be truncated when removing entry");
 #endif
@@ -863,29 +968,6 @@ static int fd_remove_item_entry_at(const off_t entry_off, const int fd) {
     }
 
     return 0;
-}
-
-/**
- * @brief Read item at an offset from fd as a new item struct
- * @param entry_off Offset of entry
- * @param fd File descriptor of file of item entries in regular format
- * @note entry_off must be the offset of the *first* character of the item
- * entry
- */
-static item * fd_read_item_at(off_t entry_off, int fd) {
-    assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
-    assert(entry_off >= 0);
-
-    char entry[DIR_ITEM_ENTRY_LEN + 1];
-    entry[DIR_ITEM_ENTRY_LEN] = '\0';
-
-    if (pread(fd, entry, DIR_ITEM_ENTRY_LEN, entry_off) < 0) {
-        return NULL;
-    }
-
-    item *it = entry_to_item(entry);
-
-    return it;
 }
 
 int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
@@ -897,6 +979,7 @@ int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
 
     item *itp = NULL;
 
+    /* Find item in project */
     open_items(O_RDWR, item_fds);
     for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
         if (item_fds[i] < 0) {
@@ -905,8 +988,7 @@ int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
 #endif
             return -1;
         }
-        /* Find item in project */
-        off_t item_off = fd_find_item_id(item_fds[i], id); 
+        off_t item_off = fd_search_for_entry(item_fds[i], id); 
 
         if (item_off >= 0) {
             /* Status is already correct - exit from function */
@@ -916,15 +998,20 @@ int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
             int fd = item_fds[i];
 
             /* Remove item from current location */
-            itp = fd_read_item_at(item_off, fd);
+            itp = fd_read_item_at(fd, item_off);
 
             if (!itp) { /* Could not read item */
                 close_items(item_fds);
                 return -1;
             }
 
-            fd_remove_item_entry_at(item_off, fd);
+            fd_remove_item_entry_at(fd, item_off);
         }
+#ifdef DEBUG
+        else if (item_off == -1) {
+            log_err("Issue when searching for item");
+        }
+#endif
     }
 
     /* Item does not exist */
@@ -935,10 +1022,6 @@ int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
     itp->item_st = new_status;
 
     /* Add to new location */
-    /*
-     * FUTURE: Check *where* the item belongs in the file to preserve
-     * order of IDs
-     */
     dir_append_item(itp);
 
     close_items(item_fds);
