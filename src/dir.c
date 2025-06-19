@@ -148,6 +148,32 @@ static void close_items(const int item_fds[_DIR_ITEM_NUM_FILES]) {
     }
 }
 
+/**
+ * @brief Open file descriptor associated with the items with status st, using
+ * flags
+ * @param st Status of items to open file descriptor for
+ * @param flags Open flags
+ * @return open file descriptor
+ * @return -1 on error
+ * @see open
+ * @see open_items in the case *all* project items need to be opened/visible
+ */
+static int open_items_status(enum status st, int flags) {
+    switch (st) {
+    case TODO:
+        return open(todo_path, flags);
+    case IN_PROG:
+        return open(ip_path, flags);
+    case DONE:
+        return open(done_path, flags);
+#ifdef DEBUG
+    default:
+        log_err("Unknown item state being requested for read");
+#endif
+    }
+    return -1;
+}
+
 /*
  * @brief Get the user's home directory
  */
@@ -587,24 +613,8 @@ item ** dir_read_items_status(enum status st) {
     setup_path_names(NULL);
 
     const int rd_flags = O_RDONLY;
-    int fd;
-
-    /* This is to be refactored from switch-case statement */
-    switch (st) {
-    case TODO:
-        fd = open(todo_path, rd_flags);
-        break;
-    case IN_PROG:
-        fd = open(ip_path, rd_flags);
-        break;
-    case DONE:
-        fd = open(done_path, rd_flags);
-        break;
-#ifdef DEBUG
-    default:
-        log_err("Unknown item state being requested for read");
-#endif
-    }
+    int fd = open_items_status(st, rd_flags);
+    if (fd == -1) return NULL;
 
     int total_items = fd_total_items(fd);
     item **items = (item **) malloc(sizeof(item *) * (total_items + 1));
@@ -864,24 +874,9 @@ static int fd_swap_item_entries_at(const int fd, const off_t off_a,
  */
 static int append_item_entry(const item *itp,
                              const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
-    int fd;
     int open_flags = O_RDWR;
-
-    switch (itp->item_st) {
-    case TODO:
-        fd = open(todo_path, open_flags);
-        break;
-    case IN_PROG:
-        fd = open(ip_path, open_flags);
-        break;
-    case DONE:
-        fd = open(done_path, open_flags);
-        break;
-#ifdef DEBUG
-    default:
-        log_err("Attempting to write item with an invalid state");
-#endif
-    }
+    int fd = open_items_status(itp->item_st, open_flags);
+    if (fd == -1) return -1;
 
     /* Ensure that the new item is placed in order */
     off_t new_item_pos = fd_search_for_entry(fd, itp->item_id);
