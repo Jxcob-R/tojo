@@ -39,15 +39,24 @@ void item_set_name_deep(item *itp, const char *const name, const size_t len) {
 }
 
 void item_print_fancy(item *itp, long long print_flags) {
+    int is_tty = isatty(STDOUT_FILENO);
+
     if (print_flags & ITEM_PRINT_ID) {
         /* ID */
-        printf(_ITEM_PRINT_ID_COL "%d\t" _ITEM_PRINT_RESET_COL, itp->item_id);
+        if (is_tty)
+            printf(_ITEM_PRINT_ID_COL "%d\t" _ITEM_PRINT_RESET_COL,
+                   itp->item_id);
+        else
+            printf("%d\t", itp->item_id);
     }
     if (print_flags & ITEM_PRINT_NAME) {
         /* Name */
-        printf("%s%s " _ITEM_PRINT_RESET_COL,
-               _ITEM_PRINT_ST_TO_COL(itp->item_st),
-               itp->item_name);
+        if (is_tty)
+            printf("%s%s " _ITEM_PRINT_RESET_COL,
+                   _ITEM_PRINT_ST_TO_COL(itp->item_st),
+                   itp->item_name);
+        else 
+            printf("%s ", itp->item_name);
     }
 
     printf("\n");
