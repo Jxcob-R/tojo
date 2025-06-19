@@ -1,5 +1,15 @@
 # CHANGELOG
 
+# 0.3
+
+- feat(cmds): Add resolve 'res' command to mark items as done ([1e263f1](https://github.com/Jxcob-R/tojo/commit/1e263f1))
+- refactor: add typedef for item ID type ([d0abbe6](https://github.com/Jxcob-R/tojo/commit/d0abbe6))
+- feat(cmds): add item restaging as add command flag ([6e789e0](https://github.com/Jxcob-R/tojo/commit/6e789e0))
+- fix(cmds): interpret user input as base 10 correctly ([81e55e8](https://github.com/Jxcob-R/tojo/commit/81e55e8))
+- docs: document command functionality in help pages ([3bd758a](https://github.com/Jxcob-R/tojo/commit/3bd758a))
+- feat: order items in project with respect to their status ([a73e260](https://github.com/Jxcob-R/tojo/commit/a73e260))
+- refactor(dir): abstract opening of status item file descriptors ([8721f3b](https://github.com/Jxcob-R/tojo/commit/8721f3b))
+
 # 0.2
 
 - refactor: store items in staging files. ([bf88f0f](https://github.com/Jxcob-R/tojo/commit/bf88f0f)) 

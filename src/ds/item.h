@@ -13,7 +13,7 @@
 /**
  * Signed item ID type
  */
-typedef int32_t sitem_id; // TODO: Change to signed 32-bit (?) int type
+typedef int32_t sitem_id;
 
 typedef struct item item;
 
