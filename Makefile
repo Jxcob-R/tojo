@@ -1,5 +1,5 @@
 CC = gcc
-CBUILDFLAGS = -std=c11 -Werror -I$(SOURCEDIR)
+CBUILDFLAGS = -std=c11 -Werror -I$(SOURCEDIR) -DNDEBUG
 CTESTFLAGS = -fsanitize=address -std=c11 -Wall -Wextra -g -DDEBUG \
 			 -I$(SOURCEDIR)
 
