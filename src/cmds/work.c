@@ -10,15 +10,17 @@
 /* Option names */
 static const struct option work_long_options[] = {
     {"help",    no_argument,            0, 'h'}, /* Help option */
-    {"id",      required_argument,      0, 'i'},  /* Name option */
+    {"id",      required_argument,      0, 'i'}, /* Name option */
+    {"code",    required_argument,      0, 'c'}, /* Code option */
     {0, 0, 0, 0}
 };
 
-static const char *work_short_options = "+hi:";
+static const char *work_short_options = "+hi:c:";
 
 static const struct opt_fn work_option_fns[] = {
     {'h', work_help,    NULL},
     {'i', NULL,         work_on_item_id},
+    {'c', NULL,         work_on_item_code},
     {0, 0, 0}
 };
 
@@ -30,10 +32,11 @@ void work_help() {
     printf("\n");
     printf("\t-i, --id\tMove item with specified ID to in progress; "
                         "item may have any state\n");
+    printf("\t-c, --code\tWork on an item with the given code\n");
     printf("\t-h, --help\tBring up this help page\n");
 }
 
-void work_on_item_id(const char * id_str) {
+void work_on_item_id(const char *id_str) {
     assert(id_str);
 
     sitem_id id = strtoll(id_str, NULL, 10);
@@ -41,11 +44,35 @@ void work_on_item_id(const char * id_str) {
     dir_change_item_status_id(id, IN_PROG);
 }
 
+void work_on_item_code(const char *code) {
+    assert(code);
+
+    sitem_id id = -1;
+    if (strlen(code) == ITEM_CODE_LEN) {
+        item *itp = dir_get_item_with_code(code);
+        if (!itp) {
+            printf("Invalid code provided");
+            return;
+        }
+        id = itp->item_id;
+        item_free(itp);
+    } else if (strlen(code) > 0) {
+        id = dir_get_id_from_prefix(code);
+    } else {
+        return;
+    }
+    if (id < 0) {
+        printf("No item found with code %s\n", code);
+    } else {
+        dir_change_item_status_id(id, IN_PROG);
+    }
+}
+
 int work_cmd(const int argc, char * const argv[], const char *proj_path) {
     assert(proj_path);
 
     if (*proj_path == '\0') {
-        printf("Not in a project");
+        printf("Not in a project\n");
         return RET_NO_PROJ;
     }
 

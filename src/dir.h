@@ -42,6 +42,7 @@
 #define _DIR_ITEM_NUM_FILES 3 /* Number of item files categorised */
 
 #define _DIR_NEXT_ID_F "NEXT_ID"    /* Next available item ID */
+#define _DIR_CODE_LIST_F "LISTED_CODES" /* Codes listed in previous list */
 
 /**
  * Special characters/tokens (for item entry)
@@ -57,8 +58,10 @@
 
 /* Item entry format */
 #define DIR_ITEM_ENTRY_LEN \
-    ( /* Item ID */ \
+(   /* Item ID */ \
     HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
+    + /* Item character code */ \
+    ITEM_CODE_LEN + _DIR_ITEM_FIELD_DELIM_LEN \
     + /* Item name */ \
     ITEM_NAME_MAX + _DIR_ITEM_DELIM_LEN \
 )
@@ -99,20 +102,12 @@ extern void dir_construct_path(const char * const path, const char *base,
 extern int dir_init(const char *path);
 
 /**
- * @brief Find item with name in project
- * @param name Name of item to find
- * @return Pointer to an item allocated on the heap, NULL if the item does not
- * exist
- */
-extern item * dir_find_item(const char *name);
-
-/**
  * @brief Count the total number of items added to the project, regardless of
  * status
  * @return Number of items
  * @return Negative value in case of error
  */
-extern int dir_total_items();
+extern int dir_total_items(void);
 
 /**
  * @brief Get next available item ID, this call also changes the next available
@@ -122,7 +117,7 @@ extern int dir_total_items();
  * index from 0
  * @return -2 on error
  */
-extern sitem_id dir_next_id();
+extern sitem_id dir_next_id(void);
 
 /**
  * @brief Read items of a single given status
@@ -138,7 +133,7 @@ extern item ** dir_read_items_status(enum status st);
  * @note Function *only* extracts names as of now which are assumed to be
  * separated by some _DIR_ITEM_DELIM
  */
-extern item ** dir_read_all_items();
+extern item ** dir_read_all_items(void);
 
 /**
  * @brief Append write the item it to the project.
@@ -157,4 +152,32 @@ extern int dir_append_item(const item *it);
  */
 extern int dir_change_item_status_id(const sitem_id id,
                                      const enum status new_status);
+
+/**
+* @brief Store item codes of items in project
+* @param items List of item pointers, terminated by a NULL pointer
+* @param prefix_lengths List of unique prefix lengths of codes, corresponding to
+* elements in items
+* @see dir_get_id_from_prefix
+*/
+extern void dir_write_item_codes(item *const *items,
+                                 const int *prefix_lengths);
+
+/**
+ * @brief Return the ID of the item associated with the listed code prefix
+ * @return ID of associated item
+ * @return -1 if no items have been listed in this project or code_prefix is
+ * NULL
+ * @note Not suitable for full (ITEM_CODE_LEN) codes, only listed *prefixes*
+ * (which may technically be ITEM_CODE_LEN characters long)
+ * @see dir_write_item_codes
+ */
+extern sitem_id dir_get_id_from_prefix(const char *code_prefix);
+
+/**
+ * @brief Retrieve the item in the project with the given code
+ * @param full_code Full ITEM_CODE_LEN code (may or may not be null terminated).
+ * @return Heap-allocated pointer to item with associated code
+ */
+extern item * dir_get_item_with_code(const char *full_code);
 #endif

@@ -16,6 +16,7 @@ static char ip_path[MAX_PATH] =    { '\0' };
 static char done_path[MAX_PATH] =  { '\0' };
 
 static char next_id_path[MAX_PATH] = { '\0' }; /* Next available item ID */
+static char listed_codes_path[MAX_PATH] = { '\0' }; /* Listed codes */
 
 /**
  * @brief Set up global path variables to default values if not already done
@@ -44,6 +45,10 @@ static void setup_path_names(const char * const path) {
     /* Next ID data */
     if (!*next_id_path)
         dir_construct_path(proj_path, _DIR_NEXT_ID_F, next_id_path, MAX_PATH);
+    /* Listed codes available */
+    if (!*listed_codes_path)
+        dir_construct_path(proj_path, _DIR_CODE_LIST_F, listed_codes_path,
+                           MAX_PATH);
 }
 
 /**
@@ -166,10 +171,11 @@ static int open_items_status(enum status st, int flags) {
         return open(ip_path, flags);
     case DONE:
         return open(done_path, flags);
-#ifdef DEBUG
     default:
+#ifdef DEBUG
         log_err("Unknown item state being requested for read");
 #endif
+        break;
     }
     return -1;
 }
@@ -177,7 +183,7 @@ static int open_items_status(enum status st, int flags) {
 /*
  * @brief Get the user's home directory
  */
-static char* get_home_directory(void) {
+static char* get_home_directory() {
     struct passwd *pw = getpwuid(getuid());
     return pw ? pw->pw_dir : NULL;
 }
@@ -349,55 +355,18 @@ int dir_init(const char *path) {
     int file_creation = create_file(next_id_path);
     dir_next_id();
 
+    /* Listed codes */
+    file_creation += create_file(listed_codes_path);
+
     /* Check file creation */
     if (file_creation != 0) {
+#ifdef DEBUG
+        log_err("Issue initalising project");
+#endif
         ret = -1;
     }
 
     return ret;
-}
-
-/**
- * @brief Read item name from file opened by file descriptor fd which contains
- * item data
- * @return Pointer to allocated item
- * @return NULL if no matching item is found
- * @see item_init, item_free
- */
-static item * fd_read_item(const int fd, const char *name) {
-    assert(name); /* Name exists */
-    assert(fd > 0); /* Valid file descriptor */
-    /* Has read perms */
-    assert((fcntl(fd, F_GETFL) & O_ACCMODE) != O_WRONLY);
-
-    size_t name_len = strlen(name);
-
-    /* Read item from file */
-    /* Assumes that each line contains only the item name */
-    char buf[ITEM_NAME_MAX];
-    char *next_name;
-    ssize_t bytes;
-
-    /* Read lines */
-    while ((bytes = read(fd, buf, sizeof(buf) - 1)) > 0) {
-        if (bytes < 0)
-            return NULL;
-
-        buf[bytes] = '\0';
-
-        /* Extract Names */
-        next_name = strtok(buf, "\n");
-        while (next_name != NULL) {
-            if (strncmp(buf, name, name_len) == 0) {
-                item *itp = item_init();
-                item_set_name_deep(itp, name, ITEM_NAME_MAX);
-                return itp;
-            }
-            next_name = strtok(NULL, "\n");
-        }
-    }
-
-    return NULL;
 }
 
 /**
@@ -411,16 +380,29 @@ static item * fd_read_item(const int fd, const char *name) {
  */
 item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
     item *item = item_init();
+    size_t pos_in_entry = 0;
+    /* Each step *may* be abstracted in the future for clarity */
 
     /*
-     * Parse item ID
+     * Parse item ID:
      * Delimiter is guaranteed not to be a valid hex digit
      */
-    const char *id = &entry[0];
+    const char *id = &entry[pos_in_entry];
     item->item_id = (sitem_id) strtoll(id, NULL, 16);
+    pos_in_entry += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
 
-    /* Parse item name */
-    const char *name = &entry[sizeof(sitem_id) * 2 + _DIR_ITEM_FIELD_DELIM_LEN];
+    /*
+     * Parse item code
+     */
+    const char *code = &entry[pos_in_entry];
+    memcpy(item->item_code, code, ITEM_CODE_LEN);
+    pos_in_entry += ITEM_CODE_LEN + _DIR_ITEM_FIELD_DELIM_LEN;
+
+    /*
+     * Parse item name
+     */
+    const char *name = &entry[pos_in_entry];
+    /* pos_in_entry does not change; name is guaranteed to be the last field */
 
     int name_len = ITEM_NAME_MAX;
 
@@ -461,39 +443,6 @@ static item * fd_read_item_at(int fd, off_t entry_off) {
     return it;
 }
 
-item * dir_find_item(const char *name) {
-    setup_path_names(NULL);
-
-    /* Item file descriptors open for reading */
-    int item_fds[_DIR_ITEM_NUM_FILES];
-
-    open_items(O_RDONLY, item_fds);
-
-    /* Simple opening check */
-    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
-        if (item_fds[i] < 0) {
-#ifdef DEBUG
-            log_err("Could not open item file for reading");
-#endif
-            return NULL;
-        }
-    }
-
-    item *itp = NULL;
-
-    for (int i = 0; i < _DIR_ITEM_NUM_FILES && !itp; i++)
-        itp = fd_read_item(item_fds[i], name);
-
-#ifdef DEBUG
-    if (itp == NULL) {
-        log_err("Item could not be allocated");
-    }
-#endif
-
-    close_items(item_fds);
-
-    return itp;
-}
 /**
  * @brief Get the total number of item entries found in the file descriptor
  * @param fd File descriptor of 
@@ -648,8 +597,7 @@ item ** dir_read_all_items() {
 
     int total_items = dir_total_items();
     /* Array of items */
-    item **items = (item **) malloc(sizeof(item *)
-                                    * (total_items + 1));
+    item **items = (item **) malloc(sizeof(item *) * (total_items + 1));
 
     if (!items) {
         puts("Could not read any items");
@@ -695,17 +643,16 @@ static void make_item_entry(const item *const itp,
      /* Item terminator */
     const char term[_DIR_ITEM_DELIM_LEN + 1] = _DIR_ITEM_DELIM;
 
-    /* Width of int in hex -- required for variable width format printing */
-    const unsigned int long_hex_width = (unsigned int) sizeof(sitem_id) * 2;
-
     /* Bytes printed to buf */
     int b = 0;
 
     /* Parse item data */
     b = snprintf(buf, DIR_ITEM_ENTRY_LEN + 1,
-                 "%0*X%s%-*s%s",
+                 "%0*X%s%.*s%s%-*s%s",
                  /* Width and value of ID */
-                 long_hex_width, itp->item_id,
+                 (int) HEX_LEN(sitem_id), itp->item_id,
+                 delim,
+                 ITEM_CODE_LEN, itp->item_code,
                  delim,
                  ITEM_NAME_MAX, itp->item_name, /* Name */
                  term);
@@ -721,14 +668,14 @@ static void make_item_entry(const item *const itp,
 }
 
 /**
- * @brief Helper for fd_search_for_entry -- does not assert invariants and is
+ * @brief Helper for fd_search_for_entry_id -- does not assert invariants and is
  * therefore potentially dangerous to use in other contexts
  * @return >= 0 offset if item found 
  * @return < 0 offset if item is not found - position of where it *should* be
  * @note Does not deal with empty file case
  */
-static off_t _fd_bin_search_entry(const int fd, const sitem_id target,
-                                   off_t start, off_t end) {
+static off_t _fd_bin_search_entry_id(const int fd, const sitem_id target,
+                                     off_t start, off_t end) {
     off_t middle = (start + end) / 2 -
                     /* Align to item entry offset */
                     (((start + end) / 2) % DIR_ITEM_ENTRY_LEN);
@@ -772,7 +719,7 @@ static off_t _fd_bin_search_entry(const int fd, const sitem_id target,
     else
         end = middle;
 
-    return _fd_bin_search_entry(fd, target, start, end);
+    return _fd_bin_search_entry_id(fd, target, start, end);
 }
 
 /**
@@ -785,7 +732,7 @@ static off_t _fd_bin_search_entry(const int fd, const sitem_id target,
  * 'would-be' insertion offset of 0; this is always returned for an empty file.
  * @return -1 on error (guaranteed not to align with a valid 'negative offset'
  */
-static off_t fd_search_for_entry(const int fd, const sitem_id target_id) {
+static off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
     /* Conduct binary search on open fd */
     assert(fcntl(fd, F_GETFD) != -1);
     int flags = fcntl(fd, F_GETFL) & O_ACCMODE;
@@ -805,7 +752,90 @@ static off_t fd_search_for_entry(const int fd, const sitem_id target_id) {
         return OFF_T_MIN;
 
     /* Commence search on whole file */
-    return _fd_bin_search_entry(fd, target_id, 0, last_off);
+    return _fd_bin_search_entry_id(fd, target_id, 0, last_off);
+}
+
+/**
+ * @brief Search for an item with matching raw field data at a given position
+ * in the item entry given an open, readable file descriptor; helper for
+ * find_item_matching_field.
+ * @param fd Open file descriptor with the ability to write
+ * @param pos_in_entry Position in entry (this effectively provides the field
+ * being compared)
+ * @param data Pointer to data expected in entry (does not have to be
+ * null-terminated)
+ * @return Pointer to heap allocated item with corresponding data
+ * @return NULL iftem not found
+ * @note Returns the *first instance* where the field data matches the data
+ * provided, be cautious (in fact, completely avoid) for fields which are not
+ * necessarily unique.
+ * @see dir.h For field positions in entry
+ * @see fd_search_for_entry_id For more efficient ID-based item searching
+ */
+static item * fd_find_item_with_data(const int fd, const off_t pos_in_entry,
+                                     const char *data) {
+    assert(fcntl(fd, F_GETFD) != -1);
+    const int flags = fcntl(fd, F_GETFL) & O_ACCMODE;
+    assert(flags == O_RDWR || flags == O_RDONLY);
+    assert(data);
+    assert(pos_in_entry >= 0);
+
+    int total_entries = fd_total_items(fd);
+
+    item *itp = NULL;
+
+    char curr_entry[DIR_ITEM_ENTRY_LEN + 1];
+    int item_found = 1;
+
+    /* Read linearly */
+    for (int i = 0; i < total_entries; i++) {
+        item_found = 1;
+        pread(fd, curr_entry, sizeof(curr_entry) - 1, i * DIR_ITEM_ENTRY_LEN);
+        /* Compare field data */
+        for (int j = pos_in_entry; item_found;j++) {
+            if (curr_entry[j] != data[j - pos_in_entry]) {
+                item_found = 0;
+            }
+        }
+        if (item_found) { /* Matched field data */
+            itp = entry_to_item(curr_entry);
+        }
+    }
+
+    return itp;
+}
+
+/**
+ * @brief Find item with matching field data in project
+ * @param pos Position in entry expected
+ * @param data Raw data expected in entry
+ * @return Pointer to heap allocated item with corresponding data
+ * @return NULL iftem not found
+ */
+static item * find_item_matching_field(const off_t pos, const char *data) {
+    int item_fds[_DIR_ITEM_NUM_FILES];
+
+    item *itp = NULL;
+
+    open_items(O_RDONLY, item_fds);
+
+    for (int i = 0; i < ITEM_STATUS_COUNT; i++) {
+        if (item_fds[i] < 0) {
+#ifdef DEBUG
+            log_err("Could not open item files for reading and writing");
+#endif
+            return itp;
+        }
+
+        itp = fd_find_item_with_data(item_fds[i], pos, data);
+
+        if (itp)
+            break;
+    }
+
+    close_items(item_fds);
+
+    return itp;
 }
 
 /**
@@ -879,7 +909,7 @@ static int append_item_entry(const item *itp,
     if (fd == -1) return -1;
 
     /* Ensure that the new item is placed in order */
-    off_t new_item_pos = fd_search_for_entry(fd, itp->item_id);
+    off_t new_item_pos = fd_search_for_entry_id(fd, itp->item_id);
     assert(new_item_pos < 0);
     /* Make non-negative */
     new_item_pos = (new_item_pos == OFF_T_MIN) ? 0 : -new_item_pos;
@@ -967,6 +997,7 @@ static int fd_remove_item_entry_at(const int fd, const off_t entry_off) {
 
 int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
     assert(new_status < ITEM_STATUS_COUNT); /* Validate status */
+    assert(_DIR_ITEM_NUM_FILES == ITEM_STATUS_COUNT); /* Expected structure */
 
     setup_path_names(NULL);
 
@@ -976,14 +1007,15 @@ int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
 
     /* Find item in project */
     open_items(O_RDWR, item_fds);
-    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
+
+    for (int i = 0; i < ITEM_STATUS_COUNT; i++) {
         if (item_fds[i] < 0) {
 #ifdef DEBUG
             log_err("Could not open item files for reading and writing");
 #endif
             return -1;
         }
-        off_t item_off = fd_search_for_entry(item_fds[i], id); 
+        off_t item_off = fd_search_for_entry_id(item_fds[i], id); 
 
         if (item_off >= 0) {
             /* Status is already correct - exit from function */
@@ -1024,4 +1056,116 @@ int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
     item_free(itp);
 
     return 0;
+}
+
+void dir_write_item_codes(item *const *items,
+                          const int *prefix_lengths) {
+    assert(items != NULL);
+    assert(prefix_lengths != NULL);
+
+    setup_path_names(NULL);
+
+    int fd_item_codes = open(listed_codes_path, O_WRONLY | O_TRUNC);
+    /* Item codes will be structured according to the following: */
+    char curr_code_entry[HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN +
+                         ITEM_CODE_LEN + _DIR_ITEM_DELIM_LEN + 1];
+
+    for (int i = 0; items[i]; i++) {
+        int pref_len = prefix_lengths[i];
+        assert(prefix_lengths[i] > 0 && prefix_lengths[i] <= ITEM_CODE_CHARS);
+
+        int b = snprintf(curr_code_entry, sizeof(curr_code_entry),
+                         "%0*X%s%-*.*s%*s%s",
+                         (int) HEX_LEN(sitem_id), items[i]->item_id,
+                         _DIR_ITEM_FIELD_DELIM,
+                         pref_len, pref_len, items[i]->item_code,
+                             ITEM_CODE_LEN - pref_len, "",
+                         _DIR_ITEM_DELIM);
+
+        if ((size_t) b < sizeof(curr_code_entry) - 1) { 
+#ifdef DEBUG
+            log_err("A code entry could not be created for listed entries");
+#endif
+            break;
+        }
+
+        if (write(fd_item_codes, curr_code_entry, sizeof(curr_code_entry) - 1) <
+            0)
+            break;
+    }
+
+    close(fd_item_codes);
+}
+
+/**
+ * @brief Check if the prefix matches the expected prefix
+ * @param prefix Prefix of code
+ * @param expected Expected prefix
+ * @note Expected prefix (expected) must be null terminated
+ */
+static int code_prefix_matches(const char *prefix, const char *expected) {
+    assert(prefix);
+    assert(expected);
+
+    /* Character to read until in prefix */
+    int matches = 1;
+
+    for (int i = 0; i < ITEM_CODE_LEN && expected[i] != '\0'; i++) {
+        if (prefix[i] != expected[i]) {
+            matches = 0;
+            break;
+        }
+    }
+
+    return matches;
+}
+
+sitem_id dir_get_id_from_prefix(const char *code_prefix) {
+    if (!code_prefix)
+        return -1;
+
+    setup_path_names(NULL);
+
+    struct stat sb;
+    if (stat(listed_codes_path, &sb) < 0)
+        return -1;
+    if (sb.st_size == 0)
+        return -1;
+
+    sitem_id found_id = -1;
+
+    /* Search last listed code prefixes */
+    int fd_listed_prefixes = open(listed_codes_path, O_RDONLY);
+    char curr_code_entry[HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN +
+                         ITEM_CODE_LEN + _DIR_ITEM_DELIM_LEN];
+    int num_items_listed = sb.st_size / sizeof(curr_code_entry);
+
+    for (int i = 0; i < num_items_listed; i++) {
+        pread(fd_listed_prefixes, curr_code_entry,
+              sizeof(curr_code_entry), i * sizeof(curr_code_entry));
+
+        if (code_prefix_matches(
+            &curr_code_entry[HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN],
+            code_prefix)) {
+            found_id = strtoll(curr_code_entry, NULL, 16);
+            break;
+        }
+    }
+    close(fd_listed_prefixes);
+
+    return found_id;
+}
+
+item * dir_get_item_with_code(const char *full_code) {
+    assert(full_code);
+
+    if (item_is_valid_code(full_code) < 0)
+        return NULL;
+
+    setup_path_names(NULL);
+
+    item *itp = find_item_matching_field(
+                    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN, full_code);
+
+    return itp;
 }

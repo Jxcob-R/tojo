@@ -19,6 +19,12 @@ extern void res_help(void);
 extern void res_item_id(const char *id_str);
 
 /**
+ * @brief Mark item with specified code as done
+ * @parma code Code of item to complete
+ */
+extern void res_item_code(const char *code);
+
+/**
  * @brief Resolve command; mark item as done
  * @param argc
  * @param argv

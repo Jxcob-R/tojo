@@ -19,6 +19,12 @@ extern void add_help(void);
 extern void add_restage_item_id(const char *id_str);
 
 /**
+ * @brief Restage an existing item as a TODO status using its code
+ * @param code Code of item to restage
+ */
+extern void add_restage_item_code(const char *code);
+
+/**
  * @brief Add name to item
  * @param name Name of new item to add
  */

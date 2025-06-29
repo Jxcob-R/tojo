@@ -4,11 +4,15 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #define ITEM_NAME_MAX 256 /* Maximum item name length */
+
+#define ITEM_CODE_LEN 7 /* Length of an item code */
+#define ITEM_CODE_CHARS 26 /* Number of usable item code characters */
 
 /**
  * Signed item ID type
@@ -22,6 +26,7 @@ typedef struct item item;
  */
 struct item {
     sitem_id item_id;
+    char item_code[ITEM_CODE_LEN];
     char *item_name;
     enum status {
         TODO,
@@ -52,6 +57,14 @@ struct item {
 extern item * item_init(void);
 
 /**
+ * @brief Allocate heap memory for a number of items and place pointers in array
+ * @param num_items Number of items to allocate heap space for
+ * @return Array of num_items pointers to items terminated by a NULL pointer
+ * @warning Pointer returned may be NULL in case of failed malloc call
+ */
+extern item **item_array_init(int num_items);
+
+/**
  * @brief Free an item and all associated resources from memory
  * @note item free *may be* NULL, however, there will be no way of knowing if
  * this was the case when the function was called.
@@ -73,6 +86,22 @@ extern void item_set_name(item *itp, char *name);
 extern void item_set_name_deep(item *itp, const char *const name,
                                const size_t len);
 
+/**
+ * @brief Sets a unique ITEM_CODE_LEN-lengthed code for an item. This is unique
+ * on the basis of IDs (see sitem_id)
+ * @param itp Pointer to item of which to set the code
+ */
+extern void item_set_code(item *itp);
+
+/**
+ * @brief Check that the code provided is a valid item code, i.e. is of the
+ * correct length and contains only valid characters.
+ * @return 1 if code is valid
+ * @return 0 if invalid
+ * @return -1 on error
+ */
+extern int item_is_valid_code(const char *code);
+
 /* Print styling using ANSI colours */
 #define _ITEM_PRINT_ID_COL "\x1b[1m"
 
@@ -80,19 +109,24 @@ extern void item_set_name_deep(item *itp, const char *const name,
 #define _ITEM_PRINT_ST_TO_COL(st) \
     ((const char*[]){"\x1b[33m", "\x1b[32m", "\x1b[34m"})[st]
 
+#define _ITEM_PRINT_CODE_INACTIVE_COL "\x1b[90m" 
+
 /* Reset colour */
 #define _ITEM_PRINT_RESET_COL "\x1b[0m"
 
 /* Print flags */
 #define ITEM_PRINT_ID (1 << 0)
 #define ITEM_PRINT_NAME (1 << 1)
-#define ITEM_PRINT_STATUS (1 << 2) /* Currently unused */
+#define ITEM_PRINT_CODE \
+    (1 << 2) /* Expects an int as arg, where 0 < arg < ITEM_CODE_LEN */
 
 /**
  * @brief Print the content of the item pointed to by itp given by print_flags
  * @param itp Pointer to item
  * @param print_flags Flags specifying print style
+ * @param arg Pointer to some argument corresponding with a print mode. Note
+ * incompatibilities and expected types
  */
-extern void item_print_fancy(item *itp, long long print_flags);
+extern void item_print_fancy(const item *itp, long long print_flags, void *arg);
 
 #endif
