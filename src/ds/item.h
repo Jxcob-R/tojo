@@ -2,6 +2,7 @@
 #define ITEM_H
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -83,7 +84,7 @@ extern void item_set_name(item *itp, char *name);
  * @note Will insert null byte if the string name of size len characters is
  * not already null terminated (that is if name[len - 1] != '\0')
  */
-extern void item_set_name_deep(item *itp, const char *const name,
+extern void item_set_name_deep(item *itp, const char *name,
                                const size_t len);
 
 /**

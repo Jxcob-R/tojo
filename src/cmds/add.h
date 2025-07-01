@@ -2,6 +2,7 @@
 #define ADD_H
 
 #include <getopt.h>
+#include <ctype.h>
 
 #include "ds/item.h"
 

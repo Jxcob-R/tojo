@@ -43,18 +43,62 @@ void item_set_name(item *itp, char * name) {
     itp->item_name = name;
 }
 
-void item_set_name_deep(item *itp, const char *const name, const size_t len) {
+/**
+ * @brief Trim leading and trailing whitespace from name
+ * @param name String to trim
+ * @return Start of string -- new
+ */
+static char * trim_name_whitespace(char *name) {
+    /* Trim leading whitespace */
+    while (isspace(*name))
+        name++;
+    if (*name == '\0') {
+#ifdef DEBUG
+        log_err("Name is just whitespace");
+#endif
+        return name;
+    }
+
+    /* Trim trailing whitespace */
+    char* end = name + strlen(name) - 1;
+    while (end >= name && isspace(*end)) {
+        end--;
+    }
+    *(end + 1) = '\0';
+
+    return name;
+}
+
+void item_set_name_deep(item *itp, const char *name, const size_t len) {
     assert(itp->item_name != NULL);
     assert(name != NULL);   /* Represents an incorrect call */
                             /* see item_set_name */
     assert(len <= ITEM_NAME_MAX);
 
-    strncpy(itp->item_name, name, len);
+    char *new_name = malloc((strlen(name) + 1) * sizeof(char));
+    if (!new_name) return;
+    strcpy(new_name, name);
+    char *new_start = trim_name_whitespace(new_name);
+
+    if (new_start - new_name > 0) {
+        char *tmp = malloc((strlen(new_start) + 1) * sizeof(char));
+        if (!tmp) {
+            free(new_name);
+            return;
+        }
+        strcpy(tmp, new_start);
+        free(new_name);
+        new_name = tmp;
+        new_start = NULL;
+    }
+
+    strncpy(itp->item_name, new_name, len);
     /* Insert null byte if not present at correct location */
-    if (strlen(name) > len - 1 && name[len - 1] != '\0') {
-        /* I believe there is an edge-case if name is 'full' */
+    if (strlen(new_name) > len - 1 && new_name[len - 1] != '\0') {
+        /* I believe there is an edge-case if the name is 'full' */
         itp->item_name[len - 1] = '\0';
     }
+    free(new_name);
 }
 
 void item_set_code(item *itp) {
