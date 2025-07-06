@@ -135,7 +135,7 @@ int item_is_valid_code(const char *code) {
         return -1;
     }
 
-    for (int i = 0; i < ITEM_CODE_LEN; i++) {
+    for (int i = 0; i < ITEM_CODE_LEN && code[i] != '\0'; i++) {
         if (!strchr(item_code_chars, code[i])) {
             return 0;
         }

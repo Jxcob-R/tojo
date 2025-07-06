@@ -34,6 +34,11 @@ void res_help() {
     printf("\t-i, --id\tResolve the item with the given id\n");
     printf("\t-c, --code\tRestage an already existing item by its code\n");
     printf("\t-h, --help\tBring up this help page\n");
+    printf("usage: %s %s [<code>]\n", CONF_CMD_NAME, RES_CMD_NAME);
+    printf("\n");
+    printf(
+        "Using an established item code (or prefix) marks item as resolved\n"
+    );
 }
 
 void res_item_id(const char *id_str) {
@@ -64,7 +69,10 @@ void res_item_code(const char *code) {
     if (id < 0) {
         printf("No item found with code %s\n", code);
     } else {
-        dir_change_item_status_id(id, DONE);
+        if (dir_change_item_status_id(id, DONE) == 0)
+            printf("Marked item with ID: %d as 'done'\n", id);
+        else
+            printf("Item is already 'done'\n");
     }
 }
 
@@ -81,9 +89,10 @@ int res_cmd(const int argc, char * const *argv, const char *proj_path) {
                                               res_long_options,
                                               res_option_fns);
 
-    if (opts_handled < 0) {
-        printf("Unknown options provided");
-        return RET_INVALID_OPTS;
+    /* Using item code is default behaviour (i.e. using -c) */
+    char *const arg = argv[1];
+    if (opts_handled == 0 && arg) {
+        res_item_code(arg);
     }
 
     return 0;

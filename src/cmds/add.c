@@ -50,6 +50,13 @@ void add_help() {
             \n");
     printf("\t-c, --code\tRestage an already existing item by its code \n");
     printf("\t-h, --help\tBring up this help page\n");
+    printf("\n");
+    printf("usage: %s %s [<name>|<code>]\n", CONF_CMD_NAME, ADD_CMD_NAME);
+    printf("\n");
+    printf(
+        "Using a new item name will add the item to the project as 'todo'\n"
+    );
+    printf("Using an established item code (or prefix) restages an item\n");
 }
 
 void add_restage_item_id(const char *id_str) {
@@ -57,7 +64,8 @@ void add_restage_item_id(const char *id_str) {
 
     sitem_id id = strtoll(id_str, NULL, 10);
 
-    dir_change_item_status_id(id, TODO);
+    if (dir_change_item_status_id(id, TODO) == 0)
+        printf("Restaged item with ID: %s as 'todo'\n", id_str);
 }
 
 void add_restage_item_code(const char *code) {
@@ -80,18 +88,22 @@ void add_restage_item_code(const char *code) {
     if (id < 0) {
         printf("No item found with code %s\n", code);
     } else {
-        dir_change_item_status_id(id, TODO);
+        if (dir_change_item_status_id(id, TODO) == 0)
+            printf("Restaged item with ID: %d as 'todo'\n", id);
+        else
+            printf("Item is already 'todo'\n");
     }
 }
 
 void add_item_name(const char *name) {
     assert(name);
     item_set_name_deep(&it, name, strlen(name) + 1);
-    printf("Added item '%s' to task list for project\n", name);
 
     /* ID set to next available number */
     it.item_id = dir_next_id();
     item_set_code(&it);
+
+    printf("Added item '%s' to task list for project with id: %d\n", name, it.item_id);
 }
 
 int add_cmd(const int argc, char * const argv[], const char *proj_path) {
@@ -112,9 +124,15 @@ int add_cmd(const int argc, char * const argv[], const char *proj_path) {
         return RET_INVALID_OPTS;
     }
 
-    /* Let name-based task addition be the default */
-    if (opts_handled == 0 && argv[1]) {
-        add_item_name(argv[1]);
+    /* Default add behaviour for no options */
+    /* Code = Re-staging */
+    /* Name/Other string = Add new item */
+    char *const arg = argv[1];
+    if (opts_handled == 0 && arg) {
+        if (item_is_valid_code(arg))
+            add_restage_item_code(arg);
+        else
+            add_item_name(arg);
     }
 
     /* Write added item to appropriate location */

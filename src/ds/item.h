@@ -95,8 +95,9 @@ extern void item_set_name_deep(item *itp, const char *name,
 extern void item_set_code(item *itp);
 
 /**
- * @brief Check that the code provided is a valid item code, i.e. is of the
- * correct length and contains only valid characters.
+ * @brief Check that the code provided is a valid item code, i.e. contains only
+ * valid characters and is *less than or equal to* a full code length.
+ * @param code Code-candidate, is null-terminated
  * @return 1 if code is valid
  * @return 0 if invalid
  * @return -1 on error

@@ -34,6 +34,12 @@ void work_help() {
                         "item may have any state\n");
     printf("\t-c, --code\tWork on an item with the given code\n");
     printf("\t-h, --help\tBring up this help page\n");
+    printf("\n");
+    printf("usage: %s %s [<code>]\n", CONF_CMD_NAME, WORK_CMD_NAME);
+    printf("\n");
+    printf(
+        "Using an established item code (or prefix) marks item as in-progress\n"
+    );
 }
 
 void work_on_item_id(const char *id_str) {
@@ -41,7 +47,8 @@ void work_on_item_id(const char *id_str) {
 
     sitem_id id = strtoll(id_str, NULL, 10);
 
-    dir_change_item_status_id(id, IN_PROG);
+    if (dir_change_item_status_id(id, IN_PROG) == 0)
+        printf("Marked item with ID: %s as 'in-progress'\n", id_str);
 }
 
 void work_on_item_code(const char *code) {
@@ -64,7 +71,10 @@ void work_on_item_code(const char *code) {
     if (id < 0) {
         printf("No item found with code %s\n", code);
     } else {
-        dir_change_item_status_id(id, IN_PROG);
+        if (dir_change_item_status_id(id, IN_PROG) == 0)
+            printf("Marked item with ID: %d as 'in-progress'\n", id);
+        else
+            printf("Item is already 'in-progress'\n");
     }
 }
 
@@ -81,9 +91,10 @@ int work_cmd(const int argc, char * const argv[], const char *proj_path) {
                                               work_long_options,
                                               work_option_fns);
 
-    if (opts_handled < 0) {
-        printf("Unknown options provided");
-        return RET_INVALID_OPTS;
+    /* Using item code is default behaviour (i.e. using -c) */
+    char *const arg = argv[1];
+    if (opts_handled == 0 && arg) {
+        work_on_item_code(arg);
     }
 
     return 0;
