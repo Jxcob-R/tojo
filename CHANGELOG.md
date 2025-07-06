@@ -1,5 +1,14 @@
 # CHANGELOG
 
+# 0.4
+
+- compat: use isatty to modify pretty (coloured) print behaviour ([0b59be4](https://github.com/Jxcob-R/tojo/commit/0b59be4))
+- chore: add NDEBUG flag to final build ([02e3fa7](https://github.com/Jxcob-R/tojo/commit/02e3fa7))
+- feat: item codes and prefixes ([025c430](https://github.com/Jxcob-R/tojo/commit/025c430))
+- refactor: clear trailing and leading whitespace in item names ([3b5707a](https://github.com/Jxcob-R/tojo/commit/3b5707a))
+- feat: set defaults for subcommands ([a3819fc](https://github.com/Jxcob-R/tojo/commit/a3819fc))
+- docs: update README with guide and overview ([af8f8e8](https://github.com/Jxcob-R/tojo/commit/af8f8e8))
+
 # 0.3
 
 - feat(cmds): Add resolve 'res' command to mark items as done ([1e263f1](https://github.com/Jxcob-R/tojo/commit/1e263f1))
