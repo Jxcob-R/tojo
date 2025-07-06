@@ -123,7 +123,7 @@ void item_set_code(item *itp) {
 
     for (int i = 0; i < ITEM_CODE_LEN; i++) {
         itp->item_code[i] = item_code_chars[code_index % ITEM_CODE_CHARS];
-        code_index /= ITEM_CODE_LEN;
+        code_index /= ITEM_CODE_CHARS;
     }
 }
 
