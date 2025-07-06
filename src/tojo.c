@@ -67,7 +67,7 @@ void tj_help() {
     printf("\twork\tMark items as in-progress\n");
     printf("\tlist\tList items in project\n");
     printf("\n");
-    printf("See more details of each command in individual help pages");
+    printf("See more details of each command in individual help pages\n");
 }
 
 void tj_print_vers() {
