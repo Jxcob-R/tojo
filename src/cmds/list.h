@@ -12,8 +12,6 @@
 
 #define LIST_CMD_NAME "list"
 
-extern const char *path; /* Project path used by all functions */
-
 /**
  * @brief Get shortened item codes from the list of items
  * @param items Array of pointers to items which are being listed
@@ -32,7 +30,15 @@ extern void list_help(void);
 /**
  * @brief List all tasks in project
  */
-extern void list_all_names();
+extern void list_all_names(void);
+
+/**
+ * @brief List items of a given status
+ * @param status Status of items to list, this is taken to represent a series of
+ * one or more of the characters 't', 'i', 'd'; mneumonics for "todo",
+ * "in-progress" and "done" respectively.
+ */
+extern void list_by_status(const char *status);
 
 /**
  * @brief Entry point for list command

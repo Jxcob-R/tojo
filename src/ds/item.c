@@ -16,7 +16,7 @@ item * item_init() {
     return itp;
 }
 
-item **item_array_init(int num_items) {
+item ** item_array_init(int num_items) {
     item **items = (item **) malloc(sizeof(item *) * (num_items + 1));
     if (items) {
         for (int i = 0; i < num_items; i++) {
@@ -25,6 +25,44 @@ item **item_array_init(int num_items) {
     }
     items[num_items] = NULL;
     return items;
+}
+
+item ** item_array_init_empty(int num_items) {
+    item **items = (item **) malloc(sizeof(item *) * (num_items + 1));
+    if (items) {
+        memset(items, 0x0, num_items * sizeof(item *));
+    }
+    return items;
+}
+
+item ** item_array_resize(item **items, int num_items) {
+    item **tmp_item_arr = realloc(items, (num_items + 1) * sizeof(item *));
+    if (!tmp_item_arr)
+        return tmp_item_arr;
+
+    tmp_item_arr[num_items] = NULL;
+    return tmp_item_arr;
+}
+
+
+size_t item_count_items(item *const *items) {
+    if (!items) return 0;
+    size_t count = 0;
+
+    while (items[count])
+        count++;
+    return count;
+}
+
+void item_array_add(item **items_dest, item *const *items_src, const size_t n) {
+    assert(items_dest);
+
+    if (!items_src) return;
+
+    /* Copy *at most* n items */
+    for (size_t i = 0; i < n && items_src[i]; i++) {
+        memcpy(items_dest + i, items_src + i, sizeof(item *));
+    }
 }
 
 void item_free(item *itp) {

@@ -9,18 +9,18 @@
 static const struct option list_long_options[] = {
     {"help",    no_argument,            0, 'h'}, /* Help option */
     {"all",     no_argument,            0, 'a'}, /* List all task items */
+    {"status",  no_argument,            0, 's'}, /* List all task items */
     {0, 0, 0, 0}
 };
 
-static const char *list_short_options = "+ha";
+static const char *list_short_options = "+has:";
 
 static const struct opt_fn list_option_fns[] = {
     {'h', list_help,        NULL},
     {'a', list_all_names,   NULL},
+    {'s', NULL,             list_by_status},
     {0, 0, 0}
 };
-
-const char *path;
 
 int * list_item_code_prefixes(item *const *items) {
     /* Yes, I've assigned a macro to a variable, its because I'm paranoid */
@@ -55,31 +55,130 @@ void list_help() { printf("%s %s - list items in project\n",
     printf("\t-h, --help\tBring up this help page\n");
 }
 
+/**
+ * @brief Print all items in array of item pointers with item code and other
+ * given flags
+ * @param items Array of item pointers
+ * @param item_print_flags
+ * @see item_print_fancy for flag options
+ * @note Frees all items as well, thus, it is assumed that items is a
+ * heap-allocated array
+ */
+static void print_list_items_codes(item **items, long long item_print_flags) {
+    /* Traverse array of items */
+    unsigned int curr_item = 0;
+
+    /* Get the prefixes of the item codes to show in list */
+    int *item_code_prefix_lengths = list_item_code_prefixes(items);
+
+    dir_write_item_codes(items, item_code_prefix_lengths);
+
+    /* Print out items */
+    while (items[curr_item] != NULL) {
+        assert(item_code_prefix_lengths[curr_item] > 0);
+        item_print_fancy(items[curr_item], item_print_flags | ITEM_PRINT_CODE,
+                         &item_code_prefix_lengths[curr_item]);
+        item_free(items[curr_item]);
+        curr_item++;
+    }
+
+    free(items);
+    free(item_code_prefix_lengths);
+}
+
 void list_all_names() {
     item **list_items = dir_read_all_items();
 
     printf("Current tasks open in this project:\n");
 
-    /* Traverse array of items */
-    unsigned int curr_item = 0;
+    print_list_items_codes(list_items, ITEM_PRINT_ID | ITEM_PRINT_NAME);
+}
 
-    /* Get the prefixes of the item codes to show in list */
-    int *item_code_prefix_lengths = list_item_code_prefixes(list_items);
+/**
+ * @brief Find any duplicate status characters in the provided status string
+ * @param status_str Status string (e.g. "tid" == "todo + in-prog + done" items)
+ * @param len Number of characters to check for duplicates
+ * @return Encoded sequence of duplicates (1 = duplicate in position; 0 = fine)
+ * The sequence is encoded from the *least* significant end
+ * Example:
+ * 0...01010 => indices 1 and 3 in status_str are duplicates
+ * @note the least significant bit is always 0
+ * @see list_by_status for status_str expectations
+ */
+static int64_t get_dup_status_chars(const char *const status_str,
+                                    const uint8_t len) {
+    assert(len <= 8 * sizeof(int64_t));
 
-    dir_write_item_codes(list_items, item_code_prefix_lengths);
+    int64_t duplicate_mask = 0;
+    for (int i = 1; i < len; i++) {
+        for (int j = 0; j < i; j++) {
+            duplicate_mask |= ((status_str[i] == status_str[j]) << i);
+        }
+    }
+    return duplicate_mask;
+}
 
-    /* Print out items */
-    while (list_items[curr_item] != NULL) {
-        assert(item_code_prefix_lengths[curr_item] > 0);
-        item_print_fancy(list_items[curr_item],
-                         ITEM_PRINT_ID | ITEM_PRINT_NAME | ITEM_PRINT_CODE,
-                         &item_code_prefix_lengths[curr_item]);
-        item_free(list_items[curr_item]);
-        curr_item++;
+void list_by_status(const char *status_str) {
+    assert(status_str);
+
+    size_t chars_in_status_str = strlen(status_str);
+
+    /* Set a reasonable capacity */
+    unsigned int list_capacity = 64;
+    unsigned int num_items = 0;
+    item **list_items = item_array_init_empty(list_capacity);
+
+    if (!list_items) return;
+
+    uint64_t duplicate_mask = get_dup_status_chars(status_str,
+                                                   ITEM_STATUS_COUNT);
+
+    /* 
+     * Since these are processed in order, this gives the user the ability to
+     * customise the order of output.
+     * Note that re-printing the same status is avoided
+     */
+    for (size_t i = 0; i < chars_in_status_str && i < ITEM_STATUS_COUNT; i++) {
+        if ((duplicate_mask >> i) & 1) continue; /* Duplicate */
+
+        item **status_items = NULL;
+        switch (status_str[i]) {
+        case 't':
+            status_items = dir_read_items_status(TODO);
+            break;
+        case 'i':
+            status_items = dir_read_items_status(IN_PROG);
+            break;
+        case 'd':
+            status_items = dir_read_items_status(DONE);
+            break;
+        default:
+            break; /* Character not expected */
+        }
+        if (status_items) {
+            /* There are a couple of potential unsafe operations here */
+            unsigned int new_num_items = item_count_items(status_items);
+            if (num_items + new_num_items > list_capacity) {
+                list_capacity *= 2;
+                list_items = item_array_resize(list_items, list_capacity);
+            }
+
+            if (!list_items) return;
+
+            item_array_add(list_items + num_items, status_items, SIZE_MAX);
+            num_items += new_num_items;
+
+            free(status_items);
+        }
     }
 
-    free(list_items);
-    free(item_code_prefix_lengths);
+    print_list_items_codes(list_items, ITEM_PRINT_ID | ITEM_PRINT_NAME);
+
+    if (strlen(status_str) > ITEM_STATUS_COUNT) {
+        puts(
+            "\nOnly the first three specified statuses where listed"
+        );
+    }
 }
 
 int list_cmd(const int argc, char * const argv[], const char *proj_path) {
@@ -89,9 +188,6 @@ int list_cmd(const int argc, char * const argv[], const char *proj_path) {
         printf("Not in a project\n");
         return RET_NO_PROJ;
     }
-
-    /* Set global variable */
-    path = proj_path;
 
     const int opts_handled = opts_handle_opts(argc, argv,
                                               list_short_options,
@@ -104,8 +200,10 @@ int list_cmd(const int argc, char * const argv[], const char *proj_path) {
     }
 
     if (opts_handled == 0) {
-        /* Default behaviour should be -a */
-        list_all_names();
+        if (argc == 1)
+            list_all_names();
+        else
+            list_by_status(argv[1]);
     }
 
     return 0;

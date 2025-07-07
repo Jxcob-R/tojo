@@ -63,7 +63,48 @@ extern item * item_init(void);
  * @return Array of num_items pointers to items terminated by a NULL pointer
  * @warning Pointer returned may be NULL in case of failed malloc call
  */
-extern item **item_array_init(int num_items);
+extern item ** item_array_init(int num_items);
+
+/**
+ * @brief Allocate heap memory for an array of item pointers, and set all
+ * positions as NULL
+ * @param num_items Number of items to allocate heap space for
+ * @return Array of num_items pointers, all pointing to NULL
+ * @warning Pointer returned may be NULL in case of failed malloc call
+ */
+extern item ** item_array_init_empty(int num_items);
+
+/**
+ * @brief Reallocates the array of item pointers with a size of nmemb pointers
+ * *plus* a terminating NULL pointer.
+ * @param items Array of item pointers to resize
+ * @param num_items The new number of items to hold in the items array
+ * @return Pointer to new start of memory buffer
+ * @return NULL if realloc call fails
+ */
+extern item ** item_array_resize(item **items, int num_items);
+
+
+/**
+ * @brief Count the number of item pointers in an array
+ * @param items Array of item pointers
+ * @return Size of items
+ * @return 0 if items is NULL
+ */
+extern size_t item_count_items(item *const *items);
+
+/**
+ * @brief Move a given number of pointers of items from a source to a
+ * destination or until source is exhausted
+ * @param items_dest Destination of items
+ * @param items_src Source of items to copy, should be terminated by a NULL
+ * pointer
+ * @param n At most number of items to copy
+ * @note Copying and Adding occurs from the start of both pointers
+ * @warning May overflow
+ */
+extern void item_array_add(item **items_dest, item *const *items_src,
+                              const size_t n);
 
 /**
  * @brief Free an item and all associated resources from memory
