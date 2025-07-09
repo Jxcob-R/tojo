@@ -7,9 +7,8 @@ locally, separate to team-based tickets (i.e., Jira or Linear).
 
 Support for GNU/Linux OS's only. Support for Mac can be introduced later.
 
-1. Clone and open project
-2. Run `make final`
-3. Put `tojo` binary in your path
+Run the `install.sh` script and specify the install path, `~/.local/bin` is used
+as the default path.
 
 ## Simple user guide
 
