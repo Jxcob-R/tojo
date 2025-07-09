@@ -66,24 +66,29 @@ void add_restage_item_id(const char *id_str) {
 
     if (dir_change_item_status_id(id, TODO) == 0)
         printf("Restaged item with ID: %s as 'todo'\n", id_str);
+    else
+        printf("Incorrect ID for item provided\n");
 }
 
 void add_restage_item_code(const char *code) {
     assert(code);
 
     sitem_id id = -1;
+    if (!item_is_valid_code(code)) {
+        puts("Please provide a valid code or code prefix");
+        return;
+    }
+
     if (strlen(code) == ITEM_CODE_LEN) {
         item *itp = dir_get_item_with_code(code);
         if (!itp) {
-            printf("Invalid code provided");
+            puts("Invalid code provided");
             return;
         }
         id = itp->item_id;
         item_free(itp);
-    } else if (strlen(code) > 0) {
-        id = dir_get_id_from_prefix(code);
     } else {
-        return;
+        id = dir_get_id_from_prefix(code);
     }
     if (id < 0) {
         printf("No item found with code %s\n", code);
