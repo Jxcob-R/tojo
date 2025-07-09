@@ -129,7 +129,7 @@ int add_cmd(const int argc, char * const argv[], const char *proj_path) {
     /* Name/Other string = Add new item */
     char *const arg = argv[1];
     if (opts_handled == 0 && arg) {
-        if (item_is_valid_code(arg))
+        if (item_is_valid_code(arg) > 0)
             add_restage_item_code(arg);
         else
             add_item_name(arg);
