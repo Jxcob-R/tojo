@@ -30,6 +30,7 @@ struct item {
     char item_code[ITEM_CODE_LEN];
     char *item_name;
     enum status {
+        BACKLOG,
         TODO,
         IN_PROG,
         DONE,
@@ -150,7 +151,7 @@ extern int item_is_valid_code(const char *code);
 
 /* Status colours from enum status */
 #define _ITEM_PRINT_ST_TO_COL(st) \
-    ((const char*[]){"\x1b[33m", "\x1b[32m", "\x1b[34m"})[st]
+    ((const char*[]){"\x1b[41m", "\x1b[33m", "\x1b[32m", "\x1b[34m"})[st]
 
 #define _ITEM_PRINT_CODE_INACTIVE_COL "\x1b[90m" 
 

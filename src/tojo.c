@@ -4,6 +4,7 @@
 #include "opts.h"
 
 #include "cmds/add.h"
+#include "cmds/backlog.h"
 #include "cmds/init.h"
 #include "cmds/list.h"
 #include "cmds/resolve.h"
@@ -32,10 +33,11 @@ static const struct opt_fn tj_option_fns[] = {
 
 static const struct cmd tj_cmds[] = {
     {ADD_CMD_NAME,  add_cmd},      /* Add an item */
+    {BACK_CMD_NAME, back_cmd},     /* Backlog an item */
     {INIT_CMD_NAME, init_cmd},     /* Project initialisation */
     {LIST_CMD_NAME, list_cmd},     /* List items */
     {WORK_CMD_NAME, work_cmd},     /* Commence work on an item */
-    {RES_CMD_NAME,  res_cmd},     /* Commence work on an item */
+    {RES_CMD_NAME,  res_cmd},      /* Commence work on an item */
     {NULL, NULL}
 };
 

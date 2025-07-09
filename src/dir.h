@@ -35,11 +35,12 @@
  * This should be considered only internally and not part of the dir interface
  */
 #define _DIR_ITEM_PATH_D "items"    /* Items directory */
+#define _DIR_ITEM_BACKLOG_F "backlog"     /* Backlog or *future* items */
 #define _DIR_ITEM_TODO_F "todo"     /* Items staged for completion */
 #define _DIR_ITEM_INPROG_F "ip"     /* Items currently mared as in progress */
 #define _DIR_ITEM_DONE_F "done"     /* Complete items */
 
-#define _DIR_ITEM_NUM_FILES 3 /* Number of item files categorised */
+#define _DIR_ITEM_NUM_FILES 4 /* Number of item files categorised */
 
 #define _DIR_NEXT_ID_F "NEXT_ID"    /* Next available item ID */
 #define _DIR_CODE_LIST_F "LISTED_CODES" /* Codes listed in previous list */

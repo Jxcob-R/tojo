@@ -12,6 +12,18 @@
 
 #define LIST_CMD_NAME "list"
 
+/*
+ * These are defined in the list implementation since we do not need this
+ * information anywhere else, that is, these short-hands may change
+ * independently to back-end modules
+ * 
+ * These are guaranteed to be strings of length ONE
+ */
+#define LIST_BACKLOG_CHAR 'b'
+#define LIST_TODO_CHAR 't'
+#define LIST_IP_CHAR 'i'
+#define LIST_DONE_CHAR 'd'
+
 /**
  * @brief Get shortened item codes from the list of items
  * @param items Array of pointers to items which are being listed

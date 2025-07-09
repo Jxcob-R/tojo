@@ -143,13 +143,16 @@ void list_by_status(const char *status_str) {
 
         item **status_items = NULL;
         switch (status_str[i]) {
-        case 't':
+        case LIST_BACKLOG_CHAR:
+            status_items = dir_read_items_status(BACKLOG);
+            break;
+        case LIST_TODO_CHAR:
             status_items = dir_read_items_status(TODO);
             break;
-        case 'i':
+        case LIST_IP_CHAR:
             status_items = dir_read_items_status(IN_PROG);
             break;
-        case 'd':
+        case LIST_DONE_CHAR:
             status_items = dir_read_items_status(DONE);
             break;
         default:
@@ -201,7 +204,13 @@ int list_cmd(const int argc, char * const argv[], const char *proj_path) {
 
     if (opts_handled == 0) {
         if (argc == 1)
-            list_all_names();
+            /* Ignore backlog by default -- see list_by_status */
+            list_by_status((const char []) { \
+                LIST_TODO_CHAR,
+                LIST_IP_CHAR,
+                LIST_DONE_CHAR,
+                0
+            });
         else
             list_by_status(argv[1]);
     }

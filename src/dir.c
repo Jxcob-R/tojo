@@ -11,9 +11,10 @@ static char proj_path[MAX_PATH] =  { '\0' };
 
 /* Item storage */
 static char items_path[MAX_PATH] = { '\0' };
-static char todo_path[MAX_PATH] =  { '\0' };
-static char ip_path[MAX_PATH] =    { '\0' };
-static char done_path[MAX_PATH] =  { '\0' };
+static char backlog_path[MAX_PATH] ={ '\0' };
+static char todo_path[MAX_PATH] =   { '\0' };
+static char ip_path[MAX_PATH] =     { '\0' };
+static char done_path[MAX_PATH] =   { '\0' };
 
 static char next_id_path[MAX_PATH] = { '\0' }; /* Next available item ID */
 static char listed_codes_path[MAX_PATH] = { '\0' }; /* Listed codes */
@@ -35,6 +36,9 @@ static void setup_path_names(const char * const path) {
         dir_construct_path(proj_path, _DIR_ITEM_PATH_D, items_path, MAX_PATH);
 
     /* Item file names */
+    if (!*backlog_path)
+        dir_construct_path(items_path, _DIR_ITEM_BACKLOG_F, backlog_path,
+                           MAX_PATH);
     if (!*todo_path)
         dir_construct_path(items_path, _DIR_ITEM_TODO_F, todo_path, MAX_PATH);
     if (!*ip_path)
@@ -94,8 +98,12 @@ static int create_items() {
     }
 
     /* Open item storage files */
-    int file_creation =
-        create_file(todo_path) + create_file(ip_path) + create_file(done_path);
+    int file_creation = (
+        create_file(backlog_path) +
+        create_file(todo_path) +
+        create_file(ip_path) +
+        create_file(done_path)
+    );
 
     if (file_creation != 0) {
 #ifdef DEBUG
@@ -125,9 +133,10 @@ static void open_items(const int flags, int item_fds[_DIR_ITEM_NUM_FILES]) {
     if (!item_fds)
         return;
 
-    item_fds[0] = open(todo_path, flags);
-    item_fds[1] = open(ip_path, flags);
-    item_fds[2] = open(done_path, flags);
+    item_fds[0] = open(backlog_path, flags);
+    item_fds[1] = open(todo_path, flags);
+    item_fds[2] = open(ip_path, flags);
+    item_fds[3] = open(done_path, flags);
 
     if (errno == ENOTDIR) {
         puts("No project listed");
@@ -165,6 +174,8 @@ static void close_items(const int item_fds[_DIR_ITEM_NUM_FILES]) {
  */
 static int open_items_status(enum status st, int flags) {
     switch (st) {
+    case BACKLOG:
+        return open(backlog_path, flags);
     case TODO:
         return open(todo_path, flags);
     case IN_PROG:
