@@ -1,5 +1,16 @@
 # CHANGELOG
 
+# 0.5
+
+- fix: add missing new line to main help ([d0db1a3](https://github.com/Jxcob-R/tojo/commit/d0db1a3))
+- fix: item code generation ([8e8835c](https://github.com/Jxcob-R/tojo/commit/8e8835c))
+- (release/0.4) fix(ds): string length also checked for validating item code ([ebbc3c0](https://github.com/Jxcob-R/tojo/commit/ebbc3c0))
+- feat(cmds): list option for status view ([f54d460](https://github.com/Jxcob-R/tojo/commit/f54d460))
+- memfix: save potential NULL reference from item code ([b7993d6](https://github.com/Jxcob-R/tojo/commit/b7993d6))
+- chore: add install script ([6267709](https://github.com/Jxcob-R/tojo/commit/6267709))
+- feat(cmds): add backlog command ([300b319](https://github.com/Jxcob-R/tojo/commit/300b319))
+- refactor(cmds): improve code validation process cleanliness ([80ad0c1](https://github.com/Jxcob-R/tojo/commit/80ad0c1))
+
 # 0.4
 
 - compat: use isatty to modify pretty (coloured) print behaviour ([0b59be4](https://github.com/Jxcob-R/tojo/commit/0b59be4))
