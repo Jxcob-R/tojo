@@ -18,6 +18,7 @@ static char done_path[MAX_PATH] =   { '\0' };
 
 static char next_id_path[MAX_PATH] = { '\0' }; /* Next available item ID */
 static char listed_codes_path[MAX_PATH] = { '\0' }; /* Listed codes */
+static char item_dependencies[MAX_PATH] = { '\0' }; /* Item dependencies */
 
 /**
  * @brief Set up global path variables to default values if not already done
@@ -52,6 +53,10 @@ static void setup_path_names(const char * const path) {
     /* Listed codes available */
     if (!*listed_codes_path)
         dir_construct_path(proj_path, _DIR_CODE_LIST_F, listed_codes_path,
+                           MAX_PATH);
+    /* Item dependencies */
+    if (!*item_dependencies)
+        dir_construct_path(proj_path, _DIR_DEPENDENICES_F, item_dependencies,
                            MAX_PATH);
 }
 
@@ -362,12 +367,11 @@ int dir_init(const char *path) {
     /* Items */
     ret = create_items();
 
-    /* ID */
     int file_creation = create_file(next_id_path);
-    dir_next_id();
+    dir_next_id(); /* Initialise ID */
 
-    /* Listed codes */
     file_creation += create_file(listed_codes_path);
+    file_creation += create_file(item_dependencies);
 
     /* Check file creation */
     if (file_creation != 0) {
@@ -1179,4 +1183,15 @@ item * dir_get_item_with_code(const char *full_code) {
                     HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN, full_code);
 
     return itp;
+}
+
+struct dependency_set * dir_construct_all_dependencies() {
+    return NULL;
+}
+
+void dir_add_dependency(const sitem_id from, const sitem_id to) {
+}
+
+int dir_rm_dependency(const sitem_id from, const sitem_id to) {
+    return 0;
 }

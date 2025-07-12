@@ -29,21 +29,24 @@
 #include <unistd.h>
 
 #include "ds/item.h"
+#include "ds/graph.h"
 
 /*
  * Project directory substructure
  * This should be considered only internally and not part of the dir interface
  */
-#define _DIR_ITEM_PATH_D "items"    /* Items directory */
-#define _DIR_ITEM_BACKLOG_F "backlog"     /* Backlog or *future* items */
-#define _DIR_ITEM_TODO_F "todo"     /* Items staged for completion */
-#define _DIR_ITEM_INPROG_F "ip"     /* Items currently mared as in progress */
-#define _DIR_ITEM_DONE_F "done"     /* Complete items */
+#define _DIR_ITEM_PATH_D "items"      /* Items directory */
+#define _DIR_ITEM_BACKLOG_F "backlog" /* Backlog or *future* items */
+#define _DIR_ITEM_TODO_F "todo"       /* Items staged for completion */
+#define _DIR_ITEM_INPROG_F "ip"       /* Items currently mared as in progress */
+#define _DIR_ITEM_DONE_F "done"       /* Complete items */
 
 #define _DIR_ITEM_NUM_FILES 4 /* Number of item files categorised */
 
-#define _DIR_NEXT_ID_F "NEXT_ID"    /* Next available item ID */
+#define _DIR_NEXT_ID_F "NEXT_ID"        /* Next available item ID */
 #define _DIR_CODE_LIST_F "LISTED_CODES" /* Codes listed in previous list */
+#define _DIR_DEPENDENICES_F \
+    "ITEM_DEPENDENCIES" /* Dependencies listed as a pair of item IDs*/
 
 /**
  * Special characters/tokens (for item entry)
@@ -181,4 +184,23 @@ extern sitem_id dir_get_id_from_prefix(const char *code_prefix);
  * @return Heap-allocated pointer to item with associated code
  */
 extern item * dir_get_item_with_code(const char *full_code);
+
+/**
+ * @brief Read dependencies listed in project
+ * @return Heap-allocacted dependency set
+ */
+extern struct dependency_set * dir_construct_all_dependencies(void);
+
+/**
+ * @brief 
+ */
+extern void dir_add_dependency(const sitem_id from, const sitem_id to);
+
+/**
+ * @brief 
+ * @return 0 if dependency is removed
+ * @return -1 if dependency does not exist
+ * @return -2 if some other error occurs
+ */
+extern int dir_rm_dependency(const sitem_id from, const sitem_id to);
 #endif
