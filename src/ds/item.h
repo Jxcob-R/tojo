@@ -85,6 +85,13 @@ extern item ** item_array_init_empty(int num_items);
  */
 extern item ** item_array_resize(item **items, int num_items);
 
+/**
+ * @brief Find item with given ID in items pointer array
+ * @param items Array of item pointers
+ * @param id Target ID to find
+ * @return Index of item with given ID in items
+ */
+extern size_t item_array_find(const item *const *items, sitem_id id);
 
 /**
  * @brief Count the number of item pointers in an array

@@ -70,6 +70,29 @@
     ITEM_NAME_MAX + _DIR_ITEM_DELIM_LEN \
 )
 
+#define _DIR_CODE_ENTRY_LEN \
+(   /* Item ID */ \
+    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
+     + /* Item character code */ \
+    ITEM_CODE_LEN + _DIR_ITEM_DELIM_LEN \
+)
+
+/* Writing item dependencies */
+
+#define _DIR_GHOST_DEPENDENCY_CHAR '1'
+#define _DIR_NO_GHOST_DEPENDENCY_CHAR '0'
+
+#define _DIR_DEPENDENCY_ENTRY_LEN \
+(   /* Item ID of dependee */ \
+    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
+    + /* Item ID of dependent item */ \
+    ITEM_CODE_LEN + _DIR_ITEM_FIELD_DELIM_LEN \
+    + /* Ghost or not */ \
+    1 \
+    + \
+    _DIR_ITEM_DELIM_LEN \
+)
+
 /* Other macros */
 #define OFF_T_MIN ((off_t)(((off_t)1) << (sizeof(off_t) * 8 - 1)))
 
@@ -189,7 +212,7 @@ extern item * dir_get_item_with_code(const char *full_code);
  * @brief Read dependencies listed in project
  * @return Heap-allocacted dependency set
  */
-extern struct dependency_set * dir_construct_all_dependencies(void);
+extern struct dependency_list * dir_get_all_dependencies(void);
 
 /**
  * @brief 

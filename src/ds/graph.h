@@ -8,6 +8,8 @@
 
 #include "item.h"
 
+#define GRAPH_INIT_CAPACITY 16
+
 /**
  * @brief An item dependency represented by a pair of IDs, this can exist
  * separately from actual item structs.
@@ -26,46 +28,35 @@ struct dependency {
 };
 
 /**
- * @brief A set of dependency 'edges' (NOT graph edges), contains allocated
- * resources for these basic edges
+ * @brief A list of dependency 'edges' (NOT graph edges), contains allocated
+ * resources for these basic edges, this may be referred to as a 'list' for the
+ * sake of brevity.
  */
-struct dependency_set {
+struct dependency_list {
     struct dependency **dependencies;
-    int count;
+    unsigned int count;
     unsigned int capacity; /* In *elements* (NOT bytes) */
 };
 
-struct graph_edge_list {
-    /* Pointers to the next edges in the graph (from head_item) */
-    struct graph_edge **edges;
-    /* Number of following edges */
-    uint16_t num_edges;
-    uint16_t capacity; /* In *elements* (NOT bytes) */
+/**
+ * @brief Represent directed graph as an adjancency matrix
+ */
+struct graph_of_items {
+    size_t count;
+    item **item_list;
+    uint8_t **adj_matrix;
 };
 
 /**
- * @brief Directed graph edge representing dependency between items allocated
- * in memory.
- * @note The convention is to use the 'base' of the dependency DAG to represent
- * the graph 'upwards'
+ * @brief Initialise empty dependency list
+ * @param initial_capacity Initial capacity of the dependency list, if this is 0
+ * then GRAPH_INIT_CAPACITY is used for the initial capacity
+ * @return Heap-allocated space for a dependency list
+ * @note No dependency structs are initialised
+ * @note List may be NULL if malloc fails
  */
-struct graph_edge {
-    /* Item at the head of the directed dependency edge */
-    item *head_item;
-    struct graph_edge_list next_edges;
-    /*
-     * If head_item is dependent, then this union will represent the previous
-     * dependency edges as a heap-allocated array, otherwise, it will represent
-     * an 'independent' source in the DAG
-     */
-    union {
-        struct graph_edge_list prev_edges;
-        item *source;
-    };
-    uint8_t has_source;
-    /* See struct dependency */
-    int is_ghost;
-};
+extern struct dependency_list *
+graph_init_dependency_list(unsigned int initial_capacity);
 
 /**
  * @brief Create new simple edge dependency given 2 item IDs and ghost status
@@ -75,42 +66,47 @@ extern struct dependency * graph_new_dependency(const sitem_id from,
                                                 const sitem_id is_ghost);
 
 /**
- * @brief Add new dependency struct to the set of current dependencies
+ * @brief Add new dependency struct to the list of current dependencies
  * @return 0 if addition is successful
  * @return -1 in case of some error
  */
 extern int
-graph_new_dependency_to_arr(struct dependency_set *set,
-                            const struct dependency *const new_dependency);
+graph_new_dependency_to_list(struct dependency_list *list,
+                             struct dependency *const new_dependency);
 
 /**
- * @brief Free array of pointers to dependencies and all associated resources
- */
-extern void graph_free_dependency_arr(struct dependency_set *set);
-
-/**
-* @brief Create dependency graph from list of items and set of dependencies
-* *upwards* from a given target item
-* @param items List of items terminated by a NULL pointer
-* @param base_item Base item (must be in items) from which to construct DAG
-* @param set Set of edges found, the final DAG will constitue some *subset* of
-* this set of dependencies
-* @note Graph edges point to items *through* their position in items. 
-* @return Graph edges directed to the base item as an edge list
-*/
-extern struct graph_edge_list * graph_create_graph(const item *const *items,
-                                                   const item *base_item,
-                                                   struct dependency_set *set);
-
-/**
-* @brief Check if an item has any dependencies listed in the dependency set
-* @param set Set of dependencies to search
+* @brief Check if an item has any dependencies listed in the dependency list
+* @param list List of dependencies to search
 * @param itp Item to find dependency for
 * @return 1 if item has dependency
 * @return 0 if item does not have dependency
 * @note That 0 can be returned either if the item is a source in the DAG
-* constructed by the dependency set, or is not present at all.
+* constructed by the dependency list, or is not present at all.
 */
-extern int graph_item_has_dependency(const struct dependency_set *set,
+extern int graph_item_has_dependency(const struct dependency_list *list,
                                      const item *itp);
+
+/**
+ * @brief Free array of pointers to dependencies and all associated resources
+ */
+extern void graph_free_dependency_list(struct dependency_list **list);
+
+/**
+ * @brief Free a graph of edges between items
+ * @param graph List of a base edges in the directed graph to free
+ */
+extern void graph_free_graph(struct graph_of_items **graph);
+
+/**
+* @brief Create dependency graph from list of items and list of dependencies
+* *upwards* from a given target item
+* @param items Pointer to array of items terminated by a NULL pointer, is set to
+* NULL after call.
+* @param base_item Base item (must be in items) from which to construct DAG
+* @param list List of edges found, the final DAG will constitue some *subset* of
+* this list is set to NULL after function call
+* @return Graph as adjacency matrix
+*/
+extern struct graph_of_items *
+graph_create_graph(item ***items, struct dependency_list **list);
 #endif

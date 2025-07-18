@@ -1,6 +1,7 @@
 #include "dir.h"
 #include "config.h"
 #include "ds/item.h"
+#include "ds/graph.h"
 
 #ifdef DEBUG
 #include "dev-utils/debug-out.h"
@@ -465,7 +466,7 @@ static item * fd_read_item_at(int fd, off_t entry_off) {
  * @return -1 on error
  * @note File contents are not read and thus, no entries can be verified
  */
-static int fd_total_items(const int fd) {
+static int fd_total_items(const int fd, const int entry_len) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
     
     /* Use stat */
@@ -473,7 +474,7 @@ static int fd_total_items(const int fd) {
     if (fstat(fd, &sb) < 0)
         return -1;
 
-    return sb.st_size / DIR_ITEM_ENTRY_LEN;
+    return sb.st_size / entry_len;
 }
 
 int dir_total_items() {
@@ -497,7 +498,7 @@ int dir_total_items() {
 
     /* Read entries by examining file sizes of all item files */
     for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
-        num_items += fd_total_items(item_fds[i]);
+        num_items += fd_total_items(item_fds[i], DIR_ITEM_ENTRY_LEN);
     }
 
     close_items(item_fds);
@@ -580,7 +581,7 @@ item ** dir_read_items_status(enum status st) {
     int fd = open_items_status(st, rd_flags);
     if (fd == -1) return NULL;
 
-    int total_items = fd_total_items(fd);
+    int total_items = fd_total_items(fd, DIR_ITEM_ENTRY_LEN);
     item **items = (item **) malloc(sizeof(item *) * (total_items + 1));
     if (!items)
         return NULL;
@@ -760,7 +761,7 @@ static off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
     }
     if (target_id < 0) return -1;
 
-    off_t last_off = (fd_total_items(fd) - 1) * DIR_ITEM_ENTRY_LEN;
+    off_t last_off = (fd_total_items(fd, DIR_ITEM_ENTRY_LEN) - 1) * DIR_ITEM_ENTRY_LEN;
 
     /* Empty file */
     if (last_off < 0)
@@ -795,7 +796,7 @@ static item * fd_find_item_with_data(const int fd, const off_t pos_in_entry,
     assert(data);
     assert(pos_in_entry >= 0);
 
-    int total_entries = fd_total_items(fd);
+    int total_entries = fd_total_items(fd, DIR_ITEM_ENTRY_LEN);
 
     item *itp = NULL;
 
@@ -875,7 +876,7 @@ static int fd_swap_item_entries_at(const int fd, const off_t off_a,
     }
 
     /* Check offsets are valid */
-    off_t total_item_size = fd_total_items(fd) * DIR_ITEM_ENTRY_LEN;
+    off_t total_item_size = fd_total_items(fd, DIR_ITEM_ENTRY_LEN) * DIR_ITEM_ENTRY_LEN;
     /*
      * NOTE: NULL arg could produce undefined behaviour without previous call
      * to setup_path_names -- will be amended in future changes
@@ -946,7 +947,7 @@ static int append_item_entry(const item *itp,
     }
 
     /* Bubble old entry back up */
-    for (off_t i = (fd_total_items(fd) - 1) * DIR_ITEM_ENTRY_LEN;
+    for (off_t i = (fd_total_items(fd, DIR_ITEM_ENTRY_LEN) - 1) * DIR_ITEM_ENTRY_LEN;
         i > new_item_pos + (off_t) DIR_ITEM_ENTRY_LEN; i -= DIR_ITEM_ENTRY_LEN)
     {
         fd_swap_item_entries_at(fd, i, i - DIR_ITEM_ENTRY_LEN);
@@ -985,7 +986,7 @@ static int fd_remove_item_entry_at(const int fd, const off_t entry_off) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
     assert(entry_off >= 0);
 
-    off_t last_off = (fd_total_items(fd) - 1) * DIR_ITEM_ENTRY_LEN;
+    off_t last_off = (fd_total_items(fd, DIR_ITEM_ENTRY_LEN) - 1) * DIR_ITEM_ENTRY_LEN;
     if (entry_off > last_off) {
 #ifdef DEBUG
         log_err("Entry offset provided too large given item file size");
@@ -1082,8 +1083,7 @@ void dir_write_item_codes(item *const *items,
 
     int fd_item_codes = open(listed_codes_path, O_WRONLY | O_TRUNC);
     /* Item codes will be structured according to the following: */
-    char curr_code_entry[HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN +
-                         ITEM_CODE_LEN + _DIR_ITEM_DELIM_LEN + 1];
+    char curr_code_entry[_DIR_CODE_ENTRY_LEN + 1];
 
     for (int i = 0; items[i]; i++) {
         int pref_len = prefix_lengths[i];
@@ -1151,8 +1151,7 @@ sitem_id dir_get_id_from_prefix(const char *code_prefix) {
 
     /* Search last listed code prefixes */
     int fd_listed_prefixes = open(listed_codes_path, O_RDONLY);
-    char curr_code_entry[HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN +
-                         ITEM_CODE_LEN + _DIR_ITEM_DELIM_LEN];
+    char curr_code_entry[_DIR_CODE_ENTRY_LEN];
     int num_items_listed = sb.st_size / sizeof(curr_code_entry);
 
     for (int i = 0; i < num_items_listed; i++) {
@@ -1185,13 +1184,78 @@ item * dir_get_item_with_code(const char *full_code) {
     return itp;
 }
 
-struct dependency_set * dir_construct_all_dependencies() {
-    return NULL;
+/**
+* @brief Read buffered dependency string entry into a dependency struct
+* @param dep Pointer to dependency struct to write to
+* @param buffer Buffer representing formatted dependency entry
+*/
+static void read_dependency(struct dependency *dep, const char *buffer) {
+    assert(buffer);
+    assert(dep);
+
+    size_t buffer_index = 0;
+
+    /* Parse *from* item ID - Delimiter is not in any part a valid hex digit */
+    dep->from = (sitem_id) strtoll(&buffer[buffer_index], NULL, 16);
+    buffer_index += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
+
+    /* Parse *to* ID */
+    dep->to = (sitem_id) strtoll(&buffer[buffer_index], NULL, 16);
+    buffer_index += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
+    
+    /* Parse is_ghost */
+    dep->is_ghost = (int) strtoll(&buffer[buffer_index], NULL, 2);
+}
+
+struct dependency_list * dir_get_all_dependencies() {
+    setup_path_names(NULL);
+
+    int fd = open(item_dependencies, O_RDONLY);
+    const unsigned int total_dependencies
+        = fd_total_items(fd, _DIR_DEPENDENCY_ENTRY_LEN); 
+    char dependency_entry[_DIR_DEPENDENCY_ENTRY_LEN] = { 0 };
+
+    struct dependency_list *list
+        = graph_init_dependency_list(total_dependencies);
+
+    struct dependency *new_dependency = NULL;
+
+    for (unsigned int i = 0; i < total_dependencies; i++) {
+        if (pread(fd, dependency_entry, sizeof(dependency_entry),
+                  i * _DIR_DEPENDENCY_ENTRY_LEN) != 0) {
+#ifdef DEBUG
+            log_err("Unable to read item dependencies");
+#endif
+            close(fd);
+            return NULL;
+        }
+        read_dependency(new_dependency, dependency_entry);
+        graph_new_dependency_to_list(list, new_dependency);
+    }
+    close(fd);
+    return list;
 }
 
 void dir_add_dependency(const sitem_id from, const sitem_id to) {
+    setup_path_names(NULL);
+    if (from < 0 || to < 0)
+        return;
+
+    int fd = open(item_dependencies, O_WRONLY | O_APPEND);
+    char dependency_entry[_DIR_DEPENDENCY_ENTRY_LEN];
+
+    if (write(fd, buf, size_t n) != 0) {
+#ifdef DEBUG
+        log_err("Unable to write dependency");
+#endif
+        close(fd);
+        return;
+    }
+    close(fd);
 }
 
 int dir_rm_dependency(const sitem_id from, const sitem_id to) {
+    (void) from;
+    (void) to;
     return 0;
 }

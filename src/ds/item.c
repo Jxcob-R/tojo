@@ -44,6 +44,24 @@ item ** item_array_resize(item **items, int num_items) {
     return tmp_item_arr;
 }
 
+/**
+ * @brief Find item with given ID in items pointer array
+ * @param items Array of item pointers
+ * @param id Target ID to find
+ * @return Index of item with given ID in items
+ * @return SIZE_MAX if the item does not appear
+ */
+size_t item_array_find(const item *const *items, sitem_id id) {
+    assert(items);
+    if (id < 0)
+        return SIZE_MAX;
+
+    for (size_t i = 0; items[i]; i++)
+        if (items[i]->item_id == id)
+            return i;
+    return SIZE_MAX;
+}
+
 
 size_t item_count_items(item *const *items) {
     if (!items) return 0;
