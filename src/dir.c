@@ -460,13 +460,13 @@ static item * fd_read_item_at(int fd, off_t entry_off) {
 }
 
 /**
- * @brief Get the total number of item entries found in the file descriptor
- * @param fd File descriptor of 
- * @return Number of item entries expected in fd
+ * @brief Get the total number of entries found in the file descriptor
+ * @param fd File descriptor of entries (of any data)
+ * @return Number of entries expected in fd
  * @return -1 on error
  * @note File contents are not read and thus, no entries can be verified
  */
-static int fd_total_items(const int fd, const int entry_len) {
+static int fd_total_items(const int fd, int entry_len) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
     
     /* Use stat */
@@ -772,53 +772,56 @@ static off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
 }
 
 /**
- * @brief Search for an item with matching raw field data at a given position
- * in the item entry given an open, readable file descriptor; helper for
- * find_item_matching_field.
- * @param fd Open file descriptor with the ability to write
+ * @brief Search for an entry with matching raw field data at a given position
+ * in the entry given an open, readable file descriptor
+ * @param fd Open file descriptor with the ability to read
+ * @param entry_len Length of each entry in the file
  * @param pos_in_entry Position in entry (this effectively provides the field
  * being compared)
  * @param data Pointer to data expected in entry (does not have to be
  * null-terminated)
- * @return Pointer to heap allocated item with corresponding data
- * @return NULL iftem not found
+ * @param delim The delimiter to use to compare data to
+ * @return Offset of matching entry in file fd
+ * @return -1 if no matching entry exists
  * @note Returns the *first instance* where the field data matches the data
  * provided, be cautious (in fact, completely avoid) for fields which are not
  * necessarily unique.
- * @see dir.h For field positions in entry
- * @see fd_search_for_entry_id For more efficient ID-based item searching
+ * @see dir.h For field positions in different entry formats
+ * @see fd_search_for_entry_id For more efficient ID-based *item* searching
  */
-static item * fd_find_item_with_data(const int fd, const off_t pos_in_entry,
-                                     const char *data) {
+static off_t fd_find_entry_with_data(int fd, size_t entry_len,
+                                     off_t pos_in_entry, const char *data,
+                                     const char *delim) {
     assert(fcntl(fd, F_GETFD) != -1);
     const int flags = fcntl(fd, F_GETFL) & O_ACCMODE;
     assert(flags == O_RDWR || flags == O_RDONLY);
     assert(data);
     assert(pos_in_entry >= 0);
 
-    int total_entries = fd_total_items(fd, DIR_ITEM_ENTRY_LEN);
+    int total_entries = fd_total_items(fd, entry_len);
 
     item *itp = NULL;
 
-    char curr_entry[DIR_ITEM_ENTRY_LEN + 1];
-    int item_found = 1;
+    char curr_entry[entry_len + 1];
+    int entry_found = 1;
 
     /* Read linearly */
     for (int i = 0; i < total_entries; i++) {
-        item_found = 1;
-        pread(fd, curr_entry, sizeof(curr_entry) - 1, i * DIR_ITEM_ENTRY_LEN);
-        /* Compare field data */
-        for (int j = pos_in_entry; item_found;j++) {
-            if (curr_entry[j] != data[j - pos_in_entry]) {
-                item_found = 0;
+        entry_found = 1;
+        pread(fd, curr_entry, sizeof(curr_entry) - 1, i * entry_len);
+        /* Compare field data until next delimiter */
+        for (int j = 0; entry_found && strcmp(delim, curr_entry + j) != 0; j++)
+        {
+            if (curr_entry[j + pos_in_entry] != data[j]) {
+                entry_found = 0;
             }
         }
-        if (item_found) { /* Matched field data */
+        if (entry_found) { /* Matched field data */
             itp = entry_to_item(curr_entry);
+            return i * entry_len;
         }
     }
-
-    return itp;
+    return -1;
 }
 
 /**
@@ -826,7 +829,7 @@ static item * fd_find_item_with_data(const int fd, const off_t pos_in_entry,
  * @param pos Position in entry expected
  * @param data Raw data expected in entry
  * @return Pointer to heap allocated item with corresponding data
- * @return NULL iftem not found
+ * @return NULL if item cannot be found
  */
 static item * find_item_matching_field(const off_t pos, const char *data) {
     int item_fds[_DIR_ITEM_NUM_FILES];
@@ -843,8 +846,18 @@ static item * find_item_matching_field(const off_t pos, const char *data) {
             return itp;
         }
 
-        itp = fd_find_item_with_data(item_fds[i], pos, data);
-
+        off_t item_offset = fd_find_entry_with_data(item_fds[i],
+                                                    DIR_ITEM_ENTRY_LEN, pos,
+                                           /* Will not work with *last* field */
+                                                    _DIR_ITEM_FIELD_DELIM,
+                                                    data);
+        if (item_offset >= 0) {
+            char correct_entry[DIR_ITEM_ENTRY_LEN];
+            if (pread(item_fds[i], correct_entry, DIR_ITEM_ENTRY_LEN,
+                      item_offset) < 0)
+                return NULL;
+            itp = entry_to_item(correct_entry);
+        }
         if (itp)
             break;
     }
@@ -973,20 +986,22 @@ int dir_append_item(const item *it) {
 }
 
 /**
- * @brief Remove item entry at given offset
- * @param fd File descriptor of file of item entries in regular format
+ * @brief Remove entry at given offset
+ * @param fd File descriptor of file of entries (of any data) in regular format
  * @param entry_off Offset of entry
+ * @param entry_len Length of a single entry in the file opened
  * @return 0 on success
  * @return -1 on error or if file if opened by fd is empty
  * @note entry_off must be the offset of the *first* character of the item
  * entry
  * @note Preserve ordering of entries (besides removed one, obviously)
  */
-static int fd_remove_item_entry_at(const int fd, const off_t entry_off) {
+static int fd_remove_entry_at(const int fd, const off_t entry_off,
+                              int entry_len) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
     assert(entry_off >= 0);
 
-    off_t last_off = (fd_total_items(fd, DIR_ITEM_ENTRY_LEN) - 1) * DIR_ITEM_ENTRY_LEN;
+    off_t last_off = (fd_total_items(fd, entry_len) - 1) * entry_len;
     if (entry_off > last_off) {
 #ifdef DEBUG
         log_err("Entry offset provided too large given item file size");
@@ -996,8 +1011,8 @@ static int fd_remove_item_entry_at(const int fd, const off_t entry_off) {
 
     /* Bubble entry to end of file */
     for (off_t i_off = entry_off; i_off < last_off;
-         i_off += DIR_ITEM_ENTRY_LEN) {
-        fd_swap_item_entries_at(fd, i_off, i_off + DIR_ITEM_ENTRY_LEN);
+         i_off += entry_len) {
+        fd_swap_item_entries_at(fd, i_off, i_off + entry_len);
     }
 
     /* Truncate file */
@@ -1048,7 +1063,7 @@ int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
                 return -1;
             }
 
-            fd_remove_item_entry_at(fd, item_off);
+            fd_remove_entry_at(fd, item_off, DIR_ITEM_ENTRY_LEN);
         }
 #ifdef DEBUG
         else if (item_off == -1) {
@@ -1185,34 +1200,65 @@ item * dir_get_item_with_code(const char *full_code) {
 }
 
 /**
-* @brief Read buffered dependency string entry into a dependency struct
-* @param dep Pointer to dependency struct to write to
-* @param buffer Buffer representing formatted dependency entry
-*/
-static void read_dependency(struct dependency *dep, const char *buffer) {
-    assert(buffer);
+ * @brief Read buffered dependency string entry into a dependency struct
+ * @param dep Pointer to dependency struct to write to
+ * @param buffer Buffer representing formatted dependency entry
+ */
+static void read_dependency(struct dependency *dep, const char *buf) {
+    assert(buf);
     assert(dep);
 
     size_t buffer_index = 0;
 
     /* Parse *from* item ID - Delimiter is not in any part a valid hex digit */
-    dep->from = (sitem_id) strtoll(&buffer[buffer_index], NULL, 16);
+    dep->from = (sitem_id) strtoll(&buf[buffer_index], NULL, 16);
     buffer_index += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
 
     /* Parse *to* ID */
-    dep->to = (sitem_id) strtoll(&buffer[buffer_index], NULL, 16);
+    dep->to = (sitem_id) strtoll(&buf[buffer_index], NULL, 16);
     buffer_index += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
     
     /* Parse is_ghost */
-    dep->is_ghost = (int) strtoll(&buffer[buffer_index], NULL, 2);
+    dep->is_ghost = (int) strtoll(&buf[buffer_index], NULL, 2);
+}
+
+/**
+ * @brief Read dependency to string buffer
+ * @param dep Dependency to make entry for
+ * @param buf Buffer to write entry to
+ */
+static void dependency_to_entry(const struct dependency *const dep, char *buf) {
+    assert(buf);
+    assert(dep);
+
+    /* Field delimiter */
+    const char delim[_DIR_ITEM_FIELD_DELIM_LEN + 1] = _DIR_ITEM_FIELD_DELIM;
+     /* Item terminator */
+    const char term[_DIR_ITEM_DELIM_LEN + 1] = _DIR_ITEM_DELIM;
+
+    int b = snprintf(buf, _DIR_DEPENDENCY_ENTRY_LEN,
+                     "%0*X%s%0*X%s%d%s",
+                     (int) HEX_LEN(sitem_id), dep->from,
+                     delim,
+                     (int) HEX_LEN(sitem_id), dep->to,
+                     delim,
+                     (int) dep->is_ghost > 0,
+                     term);
+
+#ifdef DEBUG
+    if ((size_t) b < _DIR_DEPENDENCY_ENTRY_LEN)
+        log_err("Could not write dependency item as a string entry");
+#endif
 }
 
 struct dependency_list * dir_get_all_dependencies() {
     setup_path_names(NULL);
 
     int fd = open(item_dependencies, O_RDONLY);
-    const unsigned int total_dependencies
+    const int total_dependencies
         = fd_total_items(fd, _DIR_DEPENDENCY_ENTRY_LEN); 
+    if (total_dependencies < 0)
+        return NULL;
     char dependency_entry[_DIR_DEPENDENCY_ENTRY_LEN] = { 0 };
 
     struct dependency_list *list
@@ -1220,7 +1266,7 @@ struct dependency_list * dir_get_all_dependencies() {
 
     struct dependency *new_dependency = NULL;
 
-    for (unsigned int i = 0; i < total_dependencies; i++) {
+    for (int i = 0; i < total_dependencies; i++) {
         if (pread(fd, dependency_entry, sizeof(dependency_entry),
                   i * _DIR_DEPENDENCY_ENTRY_LEN) != 0) {
 #ifdef DEBUG
@@ -1236,26 +1282,52 @@ struct dependency_list * dir_get_all_dependencies() {
     return list;
 }
 
-void dir_add_dependency(const sitem_id from, const sitem_id to) {
-    setup_path_names(NULL);
-    if (from < 0 || to < 0)
+void dir_add_dependency(const struct dependency *const dep) {
+    assert(dep);
+    if (dep->from < 0 || dep->to < 0) {
+#ifdef DEBUG
+        log_err("The from or to IDs provided were invalid");
+#endif
         return;
+    }
+
+    setup_path_names(NULL);
 
     int fd = open(item_dependencies, O_WRONLY | O_APPEND);
     char dependency_entry[_DIR_DEPENDENCY_ENTRY_LEN];
+    dependency_to_entry(dep, dependency_entry);
 
-    if (write(fd, buf, size_t n) != 0) {
+    if (write(fd, dependency_entry, sizeof(dependency_entry)) != 0) {
 #ifdef DEBUG
         log_err("Unable to write dependency");
 #endif
-        close(fd);
-        return;
     }
     close(fd);
 }
 
-int dir_rm_dependency(const sitem_id from, const sitem_id to) {
-    (void) from;
-    (void) to;
+int dir_rm_dependency(const struct dependency *const dep) {
+    assert(dep);
+    if (dep->from < 0 || dep->to < 0) {
+#ifdef DEBUG
+        log_err("The from or to IDs provided were invalid");
+#endif
+        return -1;
+    }
+    int fd = open(item_dependencies, O_WRONLY);
+
+    char entry[_DIR_DEPENDENCY_ENTRY_LEN];
+    dependency_to_entry(dep, entry);
+    off_t entry_pos = fd_find_entry_with_data(fd, _DIR_DEPENDENCY_ENTRY_LEN,
+                                              0, entry, _DIR_ITEM_DELIM);
+    if (entry_pos < 0) {
+        return -1;
+    }
+
+    if (fd_remove_entry_at(fd, entry_pos, _DIR_ITEM_FIELD_DELIM_LEN) < 0) {
+#ifdef DEBUG
+        log_err("Could not remove entry at given location");
+#endif
+        return -2;
+    }
     return 0;
 }

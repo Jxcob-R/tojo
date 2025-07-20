@@ -211,13 +211,15 @@ extern item * dir_get_item_with_code(const char *full_code);
 /**
  * @brief Read dependencies listed in project
  * @return Heap-allocacted dependency set
+ * @return NULL in case of some error
  */
 extern struct dependency_list * dir_get_all_dependencies(void);
 
 /**
- * @brief 
+ * @brief Add a dependency to the project
+ * @param dep Dependency between items to add.
  */
-extern void dir_add_dependency(const sitem_id from, const sitem_id to);
+extern void dir_add_dependency(const struct dependency *const dep);
 
 /**
  * @brief 
@@ -225,5 +227,5 @@ extern void dir_add_dependency(const sitem_id from, const sitem_id to);
  * @return -1 if dependency does not exist
  * @return -2 if some other error occurs
  */
-extern int dir_rm_dependency(const sitem_id from, const sitem_id to);
+extern int dir_rm_dependency(const struct dependency *const dep);
 #endif
