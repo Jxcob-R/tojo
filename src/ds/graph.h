@@ -69,10 +69,21 @@ extern struct dependency * graph_new_dependency(const sitem_id from,
  * @brief Add new dependency struct to the list of current dependencies
  * @return 0 if addition is successful
  * @return -1 in case of some error
+ * @note turns the pointer referencing new_dependency to NULL
  */
 extern int
 graph_new_dependency_to_list(struct dependency_list *list,
-                             struct dependency *const new_dependency);
+                             struct dependency **new_dependency);
+
+/**
+ * @brief Test if two dependency structs hold the same data
+ * @param a First dependency
+ * @param b Second dependency
+ * @return 1 if data is equal
+ * @return 0 if not
+ * @return -1 if the pointers are the same
+ */
+extern int graph_dependencies_equal(struct dependency *a, struct dependency *b);
 
 /**
 * @brief Check if an item has any dependencies listed in the dependency list
@@ -87,9 +98,34 @@ extern int graph_item_has_dependency(const struct dependency_list *list,
                                      const item *itp);
 
 /**
+ * @brief Find the dependency in the dependency list
+ * @return Index of position in the list if found
+ * @return -1 if not present
+ * @see graph_item_has_dependency
+ * @note Sets caller's target_dep pointer to NULL *if* the dependecy is found
+ */
+extern long graph_find_dependency(const struct dependency_list *list,
+                                  struct dependency **target_dep);
+/**
  * @brief Free array of pointers to dependencies and all associated resources
+ * @param list Dependency list to free (pointer set to NULL)
  */
 extern void graph_free_dependency_list(struct dependency_list **list);
+
+/**
+ * @brief Remove dependencies from a list that also appear in another
+ * dependency list.
+ * @param list Pointer to pointer of list -- modifies pointer appropriately
+ * @param reference_list Constant list of references to dependencies to check
+ * duplicates for
+ * @note Frees original list
+ * @see graph_free_dependency_list
+ * @return New allocation for list with appropriate modifications
+ * @note (implementation) implemented with a n^2 iteration approach.
+ */
+extern struct dependency_list *
+graph_remove_duplicates(struct dependency_list **list,
+                        const struct dependency_list *reference_list);
 
 /**
  * @brief Free a graph of edges between items

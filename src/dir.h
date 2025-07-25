@@ -86,7 +86,7 @@
 (   /* Item ID of dependee */ \
     HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
     + /* Item ID of dependent item */ \
-    ITEM_CODE_LEN + _DIR_ITEM_FIELD_DELIM_LEN \
+    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
     + /* Ghost or not */ \
     1 \
     + \
@@ -145,6 +145,14 @@ extern int dir_total_items(void);
  * @return -2 on error
  */
 extern sitem_id dir_next_id(void);
+
+/**
+ * @brief Check if the project contains an item with the given ID
+ * @param id ID to find
+ * @return 0 if not found
+ * @return 1 if found
+ */
+extern int dir_contains_item_with_id(sitem_id id);
 
 /**
  * @brief Read items of a single given status
@@ -214,6 +222,12 @@ extern item * dir_get_item_with_code(const char *full_code);
  * @return NULL in case of some error
  */
 extern struct dependency_list * dir_get_all_dependencies(void);
+
+/**
+ * @brief Add a list of dependencies to the project
+ * @param list Dependency list to add
+ */
+extern void dir_add_dependency_list(const struct dependency_list *const list);
 
 /**
  * @brief Add a dependency to the project

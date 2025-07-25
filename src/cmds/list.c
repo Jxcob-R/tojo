@@ -9,7 +9,7 @@
 static const struct option list_long_options[] = {
     {"help",    no_argument,            0, 'h'}, /* Help option */
     {"all",     no_argument,            0, 'a'}, /* List all task items */
-    {"status",  no_argument,            0, 's'}, /* List all task items */
+    {"status",  required_argument,      0, 's'}, /* List all task items */
     {0, 0, 0, 0}
 };
 

@@ -1,5 +1,6 @@
 #include "dev-utils/debug-out.h"
 #include "ds/item.h"
+#include "item.h"
 #include "graph.h"
 
 /**
@@ -97,39 +98,49 @@ static void create_matrix(struct graph_of_items *graph,
     graph->adj_matrix = adj_matrix;
 }
 
+/**
+ * @brief Check if two given dependency structs have equal content
+ */
+static int dependencies_are_equal(const struct dependency *first,
+                                  const struct dependency *second) {
+    return first->from == second->from &&
+           first->to == second->to &&
+           first->is_ghost == second->is_ghost;
+}
+
 //////// TODO: Refactor ////////
 
-/**
- * @brief 
- */
-static int add_dependency_edge(struct graph_edge *base_edge,
-                               struct graph_edge *add_edge) {
-    return 0;
-}
-
-/**
- * @brief 
- */
-static int add_dependency_item(struct graph_edge *base_edge,
-                               const item *const itp) {
-    return 0;
-}
-
-/**
- * @brief Removes dependency edge in graph from some base edge
- */
-static int rm_dependency_edge(struct graph_edge *base_edge,
-                              struct graph_edge *added_edge) {
-    return 0;
-}
-
-/**
- * @brief 
- */
-static int rm_dependency_item(struct graph_edge *base_edge, item *itp) {
-    return 0;
-}
-
+// /**
+//  * @brief 
+//  */
+// static int add_dependency_edge(struct graph_edge *base_edge,
+//                                struct graph_edge *add_edge) {
+//     return 0;
+// }
+//
+// /**
+//  * @brief 
+//  */
+// static int add_dependency_item(struct graph_edge *base_edge,
+//                                const item *const itp) {
+//     return 0;
+// }
+//
+// /**
+//  * @brief Removes dependency edge in graph from some base edge
+//  */
+// static int rm_dependency_edge(struct graph_edge *base_edge,
+//                               struct graph_edge *added_edge) {
+//     return 0;
+// }
+//
+// /**
+//  * @brief 
+//  */
+// static int rm_dependency_item(struct graph_edge *base_edge, item *itp) {
+//     return 0;
+// }
+//
 struct dependency_list *
 graph_init_dependency_list(unsigned int initial_capacity) {
     struct dependency **dep_list = NULL;
@@ -137,12 +148,13 @@ graph_init_dependency_list(unsigned int initial_capacity) {
     unsigned int capacity
         = initial_capacity != 0 ? initial_capacity : GRAPH_INIT_CAPACITY;
     dep_list = malloc(capacity * sizeof(struct dependency *));
+    dep_list[0] = NULL;
 #ifdef DEBUG
     if (!dep_list)
         log_err("graph_init_dependency_list: Malloc failed");
 #endif
     /* List data struct */
-    struct dependency_list *list = malloc(sizeof(struct dependency_list *));
+    struct dependency_list *list = malloc(sizeof(struct dependency_list));
     if (list) {
         list->capacity = capacity;
         list->count = 0;
@@ -158,20 +170,59 @@ struct dependency * graph_new_dependency(const sitem_id from,
 }
 
 int graph_new_dependency_to_list(struct dependency_list *list,
-                                struct dependency *const new_dependency) {
-    if (list->count == list->capacity) {
+                                struct dependency **new_dependency) {
+    if (list_at_capacity(list)) {
         grow_list(list);
     }
-    list->dependencies[list->count] = new_dependency;
+    list->dependencies[list->count] = *new_dependency;
     list->count++;
+    *new_dependency = NULL;
     return 0;
+}
+
+int graph_dependencies_equal(struct dependency *a, struct dependency *b) {
+    assert(a && b);
+
+    if (a == b)
+        return -1;
+
+    /* This is sufficient */
+    return (a->from == b->from && a->to == b->to);
 }
 
 void graph_free_dependency_list(struct dependency_list **list) {
     for (unsigned int i = 0; i < (*list)->count; i++)
         free_dependency((*list)->dependencies[i]);
+    free((*list)->dependencies);
     free(*list);
     *list = NULL;
+}
+struct dependency_list *
+graph_remove_duplicates(struct dependency_list **list,
+                        const struct dependency_list *reference_list) {
+    assert(list && *list);
+    if (!reference_list || reference_list->count == 0)
+        return *list;
+
+    struct dependency_list *new_list =
+        graph_init_dependency_list((*list)->count);
+    
+    int is_duplicated = 0;
+    for (unsigned int i = 0; i < (*list)->count; i++) {
+        for (unsigned int j = 0; j < reference_list->count; j++) {
+            if (graph_dependencies_equal((*list)->dependencies[i],
+                                          reference_list->dependencies[j])) {
+                is_duplicated = 1;
+                break;
+            }
+        }
+        if (!is_duplicated)
+            graph_new_dependency_to_list(new_list, &(*list)->dependencies[i]);
+        is_duplicated = 0;
+    }
+
+    graph_free_dependency_list(list);
+    return new_list;
 }
 
 struct graph_of_items *
@@ -195,6 +246,17 @@ int graph_item_has_dependency(const struct dependency_list *list,
             return 1;
     }
     return 0;
+}
+
+long graph_find_dependency(const struct dependency_list *list,
+                           struct dependency **target_dep) {
+    for (unsigned int i = 0; i < list->count; i++) {
+        if (dependencies_are_equal(*target_dep, list->dependencies[i])) {
+            *target_dep = NULL;
+            return i;
+        }
+    }
+    return -1;
 }
 
 void graph_free_graph(struct graph_of_items **graph) {

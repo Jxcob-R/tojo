@@ -507,6 +507,52 @@ int dir_total_items() {
 }
 
 /**
+ * @brief Search for an entry with matching raw field data at a given position
+ * in the entry given an open, readable file descriptor
+ * @param fd Open file descriptor with the ability to read
+ * @param entry_len Length of each entry in the file
+ * @param pos_in_entry Position in entry (this effectively provides the field
+ * being compared)
+ * @param data Pointer to data expected in entry (does not have to be
+ * null-terminated)
+ * @param delim The delimiter to use to compare data to
+ * @return Offset of matching entry in file fd
+ * @return -1 if no matching entry exists
+ * @note Returns the *first instance* where the field data matches the data
+ * provided, be cautious (in fact, completely avoid) for fields which are not
+ * necessarily unique.
+ * @see dir.h For field positions in different entry formats
+ * @see fd_search_for_entry_id For more efficient ID-based *item* searching
+ */
+static off_t fd_find_entry_with_data(int fd, size_t entry_len,
+                                     off_t pos_in_entry, const char *data,
+                                     const char *delim) {
+    assert(fcntl(fd, F_GETFD) != -1);
+    const int flags = fcntl(fd, F_GETFL) & O_ACCMODE;
+    assert(flags == O_RDWR || flags == O_RDONLY);
+    assert(data);
+    assert(pos_in_entry >= 0);
+
+    int total_entries = fd_total_items(fd, entry_len);
+
+    char curr_entry[entry_len + 1];
+    int entry_found = 1;
+
+    /* Read linearly */
+    for (int i = 0; i < total_entries; i++) {
+        entry_found = 1;
+        pread(fd, curr_entry, sizeof(curr_entry) - 1, i * entry_len);
+        /* Compare field data until next delimiter */
+        char *delim_pos = strstr(curr_entry, delim);
+        entry_found = strncmp(curr_entry, data, (delim_pos - curr_entry)) == 0;
+        if (entry_found) { /* Matched field data */
+            return i * entry_len;
+        }
+    }
+    return -1;
+}
+
+/**
  * @brief Increment the next available ID in the NEXT_ID file
  * @param fd_next_id File descriptor open with read and write permissions for
  * next ID file.
@@ -572,6 +618,20 @@ sitem_id dir_next_id() {
 
     close(fd_id);
     return curr_id;
+}
+
+int dir_contains_item_with_id(sitem_id id) {
+    int item_fds[_DIR_ITEM_NUM_FILES];
+    open_items(O_RDONLY, item_fds);
+    char id_str[HEX_LEN(sitem_id) + 1];
+    snprintf(id_str, sizeof(id_str), "%0*X", (int) HEX_LEN(sitem_id), id);
+    for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
+        if (fd_find_entry_with_data(item_fds[i], DIR_ITEM_ENTRY_LEN, 0, id_str,
+                                    _DIR_ITEM_FIELD_DELIM) >= 0) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 item ** dir_read_items_status(enum status st) {
@@ -772,59 +832,6 @@ static off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
 }
 
 /**
- * @brief Search for an entry with matching raw field data at a given position
- * in the entry given an open, readable file descriptor
- * @param fd Open file descriptor with the ability to read
- * @param entry_len Length of each entry in the file
- * @param pos_in_entry Position in entry (this effectively provides the field
- * being compared)
- * @param data Pointer to data expected in entry (does not have to be
- * null-terminated)
- * @param delim The delimiter to use to compare data to
- * @return Offset of matching entry in file fd
- * @return -1 if no matching entry exists
- * @note Returns the *first instance* where the field data matches the data
- * provided, be cautious (in fact, completely avoid) for fields which are not
- * necessarily unique.
- * @see dir.h For field positions in different entry formats
- * @see fd_search_for_entry_id For more efficient ID-based *item* searching
- */
-static off_t fd_find_entry_with_data(int fd, size_t entry_len,
-                                     off_t pos_in_entry, const char *data,
-                                     const char *delim) {
-    assert(fcntl(fd, F_GETFD) != -1);
-    const int flags = fcntl(fd, F_GETFL) & O_ACCMODE;
-    assert(flags == O_RDWR || flags == O_RDONLY);
-    assert(data);
-    assert(pos_in_entry >= 0);
-
-    int total_entries = fd_total_items(fd, entry_len);
-
-    item *itp = NULL;
-
-    char curr_entry[entry_len + 1];
-    int entry_found = 1;
-
-    /* Read linearly */
-    for (int i = 0; i < total_entries; i++) {
-        entry_found = 1;
-        pread(fd, curr_entry, sizeof(curr_entry) - 1, i * entry_len);
-        /* Compare field data until next delimiter */
-        for (int j = 0; entry_found && strcmp(delim, curr_entry + j) != 0; j++)
-        {
-            if (curr_entry[j + pos_in_entry] != data[j]) {
-                entry_found = 0;
-            }
-        }
-        if (entry_found) { /* Matched field data */
-            itp = entry_to_item(curr_entry);
-            return i * entry_len;
-        }
-    }
-    return -1;
-}
-
-/**
  * @brief Find item with matching field data in project
  * @param pos Position in entry expected
  * @param data Raw data expected in entry
@@ -852,7 +859,7 @@ static item * find_item_matching_field(const off_t pos, const char *data) {
                                                     _DIR_ITEM_FIELD_DELIM,
                                                     data);
         if (item_offset >= 0) {
-            char correct_entry[DIR_ITEM_ENTRY_LEN];
+            char correct_entry[DIR_ITEM_ENTRY_LEN + 1];
             if (pread(item_fds[i], correct_entry, DIR_ITEM_ENTRY_LEN,
                       item_offset) < 0)
                 return NULL;
@@ -1236,13 +1243,13 @@ static void dependency_to_entry(const struct dependency *const dep, char *buf) {
      /* Item terminator */
     const char term[_DIR_ITEM_DELIM_LEN + 1] = _DIR_ITEM_DELIM;
 
-    int b = snprintf(buf, _DIR_DEPENDENCY_ENTRY_LEN,
+    int b = snprintf(buf, _DIR_DEPENDENCY_ENTRY_LEN + 1,
                      "%0*X%s%0*X%s%d%s",
                      (int) HEX_LEN(sitem_id), dep->from,
                      delim,
                      (int) HEX_LEN(sitem_id), dep->to,
                      delim,
-                     (int) dep->is_ghost > 0,
+                     dep->is_ghost > 0,
                      term);
 
 #ifdef DEBUG
@@ -1267,8 +1274,9 @@ struct dependency_list * dir_get_all_dependencies() {
     struct dependency *new_dependency = NULL;
 
     for (int i = 0; i < total_dependencies; i++) {
+        new_dependency = graph_new_dependency(-1, -1, 0);
         if (pread(fd, dependency_entry, sizeof(dependency_entry),
-                  i * _DIR_DEPENDENCY_ENTRY_LEN) != 0) {
+                  i * _DIR_DEPENDENCY_ENTRY_LEN) == -1) {
 #ifdef DEBUG
             log_err("Unable to read item dependencies");
 #endif
@@ -1276,10 +1284,17 @@ struct dependency_list * dir_get_all_dependencies() {
             return NULL;
         }
         read_dependency(new_dependency, dependency_entry);
-        graph_new_dependency_to_list(list, new_dependency);
+        graph_new_dependency_to_list(list, &new_dependency);
     }
     close(fd);
     return list;
+}
+
+void dir_add_dependency_list(const struct dependency_list *const list) {
+    assert(list);
+for (unsigned int i = 0; i < list->count; i++) {
+        dir_add_dependency(list->dependencies[i]);
+    }
 }
 
 void dir_add_dependency(const struct dependency *const dep) {
@@ -1294,10 +1309,10 @@ void dir_add_dependency(const struct dependency *const dep) {
     setup_path_names(NULL);
 
     int fd = open(item_dependencies, O_WRONLY | O_APPEND);
-    char dependency_entry[_DIR_DEPENDENCY_ENTRY_LEN];
+    char dependency_entry[_DIR_DEPENDENCY_ENTRY_LEN + 1];
     dependency_to_entry(dep, dependency_entry);
 
-    if (write(fd, dependency_entry, sizeof(dependency_entry)) != 0) {
+    if (write(fd, dependency_entry, _DIR_DEPENDENCY_ENTRY_LEN) == -1) {
 #ifdef DEBUG
         log_err("Unable to write dependency");
 #endif
