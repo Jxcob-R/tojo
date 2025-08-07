@@ -53,6 +53,12 @@ extern void list_all_names(void);
 extern void list_by_status(const char *status);
 
 /**
+ * @brief List the dependencies associated with the item with the ID given
+ * @param id_str Base 10 representation of the item ID
+ */
+extern void list_dependencies(const char *id_str);
+
+/**
  * @brief Entry point for list command
  * @param argc
  * @param argv Arguments *from* command name (i.e. list <args> ...)

@@ -621,6 +621,10 @@ sitem_id dir_next_id() {
 }
 
 int dir_contains_item_with_id(sitem_id id) {
+    setup_path_names(NULL);
+    if (id < 0)
+        return 0;
+
     int item_fds[_DIR_ITEM_NUM_FILES];
     open_items(O_RDONLY, item_fds);
     char id_str[HEX_LEN(sitem_id) + 1];

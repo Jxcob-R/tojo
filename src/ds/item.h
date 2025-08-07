@@ -121,6 +121,15 @@ extern void item_array_add(item **items_dest, item *const *items_src,
  */
 extern void item_free(item *itp);
 
+
+/**
+ * @brief Free an item array, setting the array pointer to NULL afterwards
+ * @param arr Pointer to array of item pointers to free
+ * @param max The maximum size of the item array, note that regular terminate on
+ * NULL value implementation rules do apply
+ */
+extern void item_array_free(item ***arr, size_t max);
+
 /**
  * @brief Set the name of an item using a reference to the string provided.
  * @see item_set_name_deep for a heap deep-copy version
@@ -170,6 +179,7 @@ extern int item_is_valid_code(const char *code);
 #define ITEM_PRINT_NAME (1 << 1)
 #define ITEM_PRINT_CODE \
     (1 << 2) /* Expects an int as arg, where 0 < arg < ITEM_CODE_LEN */
+#define ITEM_PRINT_NO_NEWLINE (1 << 3)
 
 /**
  * @brief Print the content of the item pointed to by itp given by print_flags
@@ -178,6 +188,6 @@ extern int item_is_valid_code(const char *code);
  * @param arg Pointer to some argument corresponding with a print mode. Note
  * incompatibilities and expected types
  */
-extern void item_print_fancy(const item *itp, long long print_flags, void *arg);
+extern void item_print_fancy(const item *itp, uint64_t print_flags, void *arg);
 
 #endif

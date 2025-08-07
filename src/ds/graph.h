@@ -40,6 +40,8 @@ struct dependency_list {
 
 /**
  * @brief Represent directed graph as an adjancency matrix
+ * @note For implementation, each 'row' of the matrix represents the
+ * out-vertices
  */
 struct graph_of_items {
     size_t count;
@@ -138,11 +140,32 @@ extern void graph_free_graph(struct graph_of_items **graph);
 * *upwards* from a given target item
 * @param items Pointer to array of items terminated by a NULL pointer, is set to
 * NULL after call.
-* @param base_item Base item (must be in items) from which to construct DAG
-* @param list List of edges found, the final DAG will constitue some *subset* of
-* this list is set to NULL after function call
+* @param list List of edges found, the final DAG will constitute some *subset*
+* of this list is set to NULL after function call
 * @return Graph as adjacency matrix
 */
 extern struct graph_of_items *
 graph_create_graph(item ***items, struct dependency_list **list);
+
+/**
+ * @brief Obtain the relevant subgraph of the DAG super_graph that contains the
+ * item with some target ID and all parent items and relevant edges.
+ * @note The resultant graph only contains a *single* 'sink'/leaf item (that is,
+ * the target item)
+ * @param super_graph DAG from which to obtain the sub-graph, the pointer to
+ * this graph is set to NULL after the call
+ * @param target_id ID of target item; i.e. "leaf" of the resultant sub-graph
+ * @return New allocated graph of items
+ */
+extern struct graph_of_items *
+graph_get_subgraph_to_item(struct graph_of_items **super_graph,
+                           sitem_id target_id);
+
+/**
+ * @brief Print each node and edge in the DAG using item format/fancy printing
+ * @see item_print_fancy
+ * @param dag DAG of items to print
+ * @param print_flags Flags to pass to item_print_fancy
+ */
+extern void graph_print_dag_with_item_fields(const struct graph_of_items *dag, uint64_t print_flags);
 #endif

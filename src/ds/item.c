@@ -94,6 +94,15 @@ void item_free(item *itp) {
     free(itp);
 }
 
+void item_array_free(item ***arr, size_t max) {
+    assert(arr && *arr);
+    for (size_t i = 0; (*arr)[i] && i < max; i++) {
+        item_free((*arr)[i]);
+    }
+    free(*arr);
+    *arr = NULL;
+}
+
 void item_set_name(item *itp, char * name) {
     assert(itp != NULL);
     itp->item_name = name;
@@ -203,7 +212,7 @@ int item_is_valid_code(const char *code) {
     return 1;
 }
 
-void item_print_fancy(const item *itp, long long print_flags, void *arg) {
+void item_print_fancy(const item *itp, uint64_t print_flags, void *arg) {
     int is_tty = isatty(STDOUT_FILENO);
 
     if (print_flags & ITEM_PRINT_ID) {
@@ -245,6 +254,7 @@ void item_print_fancy(const item *itp, long long print_flags, void *arg) {
             printf("%s ", itp->item_name);
     }
 
-    printf("\n");
+    if (!(print_flags & ITEM_PRINT_NO_NEWLINE))
+        printf("\n");
     fflush(stdout);
 }

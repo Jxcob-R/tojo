@@ -1,5 +1,6 @@
 #include "list.h"
 #include "dir.h"
+#include "ds/graph.h"
 #include "ds/item.h"
 #include "opts.h"
 #include "config.h"
@@ -10,15 +11,17 @@ static const struct option list_long_options[] = {
     {"help",    no_argument,            0, 'h'}, /* Help option */
     {"all",     no_argument,            0, 'a'}, /* List all task items */
     {"status",  required_argument,      0, 's'}, /* List all task items */
+    {"dependencies", required_argument, 0, 'd'}, /* List item dependencies */
     {0, 0, 0, 0}
 };
 
-static const char *list_short_options = "+has:";
+static const char *list_short_options = "+has:d:";
 
 static const struct opt_fn list_option_fns[] = {
     {'h', list_help,        NULL},
     {'a', list_all_names,   NULL},
     {'s', NULL,             list_by_status},
+    {'d', NULL,             list_dependencies},
     {0, 0, 0}
 };
 
@@ -182,6 +185,37 @@ void list_by_status(const char *status_str) {
             "\nOnly the first three specified statuses where listed"
         );
     }
+}
+
+void list_dependencies(const char *id_str) {
+    sitem_id id = strtoll(id_str, NULL, 10);
+    if (!dir_contains_item_with_id(id)) {
+        printf("Project does not contain item %d\n", id);
+        return;
+    }
+    item **project_items = dir_read_all_items();
+    struct dependency_list *project_dependencies = dir_get_all_dependencies();
+
+    struct graph_of_items *full_proj_dag =
+        graph_create_graph(&project_items, &project_dependencies);
+
+    /* Obtain only relevant part of dependency graph */
+    struct graph_of_items *target_dag =
+        graph_get_subgraph_to_item(&full_proj_dag, id);
+
+    /* Print -- guaranteed not to contain cycles; one sink, many sources */
+    printf("This is a list dependency graph\n");
+
+    // TODO:
+    // 1. Start with sink (build up)
+    // 2.  -> Note: print in 'reverse' order?
+    //  (very memory intensive)
+    //  OR
+    // 1. Start at further source
+    // 2. Use git style graph * for text | for next
+    graph_print_dag_with_item_fields(target_dag, ITEM_PRINT_ID);
+
+    graph_free_graph(&target_dag);
 }
 
 int list_cmd(const int argc, char * const argv[], const char *proj_path) {
