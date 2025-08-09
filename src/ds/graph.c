@@ -156,39 +156,6 @@ static int dependencies_are_equal(const struct dependency *first,
            first->is_ghost == second->is_ghost;
 }
 
-//////// TODO: Refactor ////////
-
-// /**
-//  * @brief 
-//  */
-// static int add_dependency_edge(struct graph_edge *base_edge,
-//                                struct graph_edge *add_edge) {
-//     return 0;
-// }
-//
-// /**
-//  * @brief 
-//  */
-// static int add_dependency_item(struct graph_edge *base_edge,
-//                                const item *const itp) {
-//     return 0;
-// }
-//
-// /**
-//  * @brief Removes dependency edge in graph from some base edge
-//  */
-// static int rm_dependency_edge(struct graph_edge *base_edge,
-//                               struct graph_edge *added_edge) {
-//     return 0;
-// }
-//
-// /**
-//  * @brief 
-//  */
-// static int rm_dependency_item(struct graph_edge *base_edge, item *itp) {
-//     return 0;
-// }
-//
 struct dependency_list *
 graph_init_dependency_list(unsigned int initial_capacity) {
     struct dependency **dep_list = NULL;
@@ -429,6 +396,9 @@ void graph_print_dag_with_item_fields(const struct graph_of_items *dag,
     // TODO: See breakdown of git algorithm
     // Find sources (nodes with corresponding columns of all 0s)
     printf("Item %d is blocked by the following items:\n", target);
+
+    // TODO: Extract magic number
+    size_t dag_sources_indices[64] = {0};
 
     for (size_t i = 0; i < dag->count; i++)
         item_print_fancy(dag->item_list[i], print_flags, NULL);

@@ -49,7 +49,7 @@ parse_dependencies_from_user(const char *dep_str,
                              struct dependency_list **project_dependencies) {
     if (!strchr(dep_str, *DEP_DELIM)) {
         printf("Depedencies not provided in the correct format\n");
-        printf("Use <id-dependent>%s<id1>,<id2>,... to create dependencies",
+        printf("Use <id-dependent>%s<id1>,<id2>,... to create dependencies\n",
                DEP_DELIM);
         return NULL;
     }
