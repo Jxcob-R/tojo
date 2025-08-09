@@ -16,10 +16,10 @@
  * @note Dependencies effectively represent directed edges
  */
 struct dependency {
-    /* The "independent" item ID (i.e. the one that to *depends on*) */
-    sitem_id from;
     /* The "dependent" item ID */
     sitem_id to;
+    /* The "independent" item ID (i.e. the one to *depends on*) */
+    sitem_id from;
     /*
      * Ghosts are created when a dependency is created for an item which is
      * already complete
@@ -167,5 +167,7 @@ graph_get_subgraph_to_item(struct graph_of_items **super_graph,
  * @param dag DAG of items to print
  * @param print_flags Flags to pass to item_print_fancy
  */
-extern void graph_print_dag_with_item_fields(const struct graph_of_items *dag, uint64_t print_flags);
+extern void
+graph_print_dag_with_item_fields(const struct graph_of_items *dag,
+                                 sitem_id target, uint64_t print_flags);
 #endif

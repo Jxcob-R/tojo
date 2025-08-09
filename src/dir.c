@@ -677,7 +677,7 @@ item ** dir_read_all_items() {
 
     int total_items = dir_total_items();
     /* Array of items */
-    item **items = (item **) malloc(sizeof(item *) * (total_items + 1));
+    item **items = item_array_init_empty(total_items);
 
     if (!items) {
         puts("Could not read any items");
@@ -702,9 +702,6 @@ item ** dir_read_all_items() {
 
         free(items_of_same_st);
     }
-
-    /* Set last item pointer to NULL */
-    items[total_items] = NULL;
 
     return items;
 }
@@ -1221,12 +1218,12 @@ static void read_dependency(struct dependency *dep, const char *buf) {
 
     size_t buffer_index = 0;
 
-    /* Parse *from* item ID - Delimiter is not in any part a valid hex digit */
-    dep->from = (sitem_id) strtoll(&buf[buffer_index], NULL, 16);
+    /* Parse *to* item ID - Delimiter is not in any part a valid hex digit */
+    dep->to = (sitem_id) strtoll(&buf[buffer_index], NULL, 16);
     buffer_index += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
 
-    /* Parse *to* ID */
-    dep->to = (sitem_id) strtoll(&buf[buffer_index], NULL, 16);
+    /* Parse *from* ID */
+    dep->from = (sitem_id) strtoll(&buf[buffer_index], NULL, 16);
     buffer_index += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
     
     /* Parse is_ghost */
@@ -1244,14 +1241,14 @@ static void dependency_to_entry(const struct dependency *const dep, char *buf) {
 
     /* Field delimiter */
     const char delim[_DIR_ITEM_FIELD_DELIM_LEN + 1] = _DIR_ITEM_FIELD_DELIM;
-     /* Item terminator */
+    /* Item terminator */
     const char term[_DIR_ITEM_DELIM_LEN + 1] = _DIR_ITEM_DELIM;
 
     int b = snprintf(buf, _DIR_DEPENDENCY_ENTRY_LEN + 1,
                      "%0*X%s%0*X%s%d%s",
-                     (int) HEX_LEN(sitem_id), dep->from,
-                     delim,
                      (int) HEX_LEN(sitem_id), dep->to,
+                     delim,
+                     (int) HEX_LEN(sitem_id), dep->from,
                      delim,
                      dep->is_ghost > 0,
                      term);
@@ -1296,7 +1293,7 @@ struct dependency_list * dir_get_all_dependencies() {
 
 void dir_add_dependency_list(const struct dependency_list *const list) {
     assert(list);
-for (unsigned int i = 0; i < list->count; i++) {
+    for (unsigned int i = 0; i < list->count; i++) {
         dir_add_dependency(list->dependencies[i]);
     }
 }

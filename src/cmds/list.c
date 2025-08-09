@@ -203,17 +203,9 @@ void list_dependencies(const char *id_str) {
     struct graph_of_items *target_dag =
         graph_get_subgraph_to_item(&full_proj_dag, id);
 
-    /* Print -- guaranteed not to contain cycles; one sink, many sources */
-    printf("This is a list dependency graph\n");
-
-    // TODO:
-    // 1. Start with sink (build up)
-    // 2.  -> Note: print in 'reverse' order?
-    //  (very memory intensive)
-    //  OR
-    // 1. Start at further source
-    // 2. Use git style graph * for text | for next
-    graph_print_dag_with_item_fields(target_dag, ITEM_PRINT_ID);
+    /* No item codes listed */
+    graph_print_dag_with_item_fields(target_dag, id, ITEM_PRINT_ID |
+                                                     ITEM_PRINT_NAME);
 
     graph_free_graph(&target_dag);
 }

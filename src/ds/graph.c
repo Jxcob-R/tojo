@@ -84,6 +84,7 @@ static uint8_t **init_matrix(size_t n) {
         if (!adj_matrix[i]) {
             return NULL;
         }
+        memset(adj_matrix[i], 0, n);
     }
 
     return adj_matrix;
@@ -114,7 +115,8 @@ struct graph_of_items * init_graph() {
 
 /**
  * @brief Create adjacency matrix from given list and provide it to the given
- * graph @param graph Graph to populate
+ * graph
+ * @param graph Graph to populate
  * @param list List of dependencies from which to generate the adjacency matrix
  */
 static void create_matrix(struct graph_of_items *graph,
@@ -137,6 +139,7 @@ static void create_matrix(struct graph_of_items *graph,
                                         from_id);
         index_of_to = item_array_find((const item *const *)graph->item_list,
                                       to_id);
+        /* Mark edge*/
         adj_matrix[index_of_from][index_of_to] = 1;
     }
 
@@ -216,6 +219,9 @@ struct dependency * graph_new_dependency(const sitem_id from,
 
 int graph_new_dependency_to_list(struct dependency_list *list,
                                 struct dependency **new_dependency) {
+    if (!*new_dependency) {
+        return -1;
+    }
     if (list_at_capacity(list)) {
         grow_list(list);
     }
@@ -325,7 +331,8 @@ static size_t reverse_dag_dfs(uint8_t *const *adj_matrix, uint8_t *visited,
 
     size_t in_tree_size = 1; /* We count the starting node, so always >= 1 */
     for (size_t i = 0; i < n; i++) {
-        if (has_edge((uint8_t const *const *)adj_matrix, start, i) && !visited)
+        if (has_edge((uint8_t const *const *)adj_matrix, start, i) &&
+            !visited[i])
         {
             visited[i] = 1;
             adj_matrix[start][i] = UINT8_MAX;
@@ -340,19 +347,18 @@ static size_t reverse_dag_dfs(uint8_t *const *adj_matrix, uint8_t *visited,
  * @brief Get matrix of ancestor items in DAG from position i, this is assumed
  * to not contain cycles, but may not be connected.
  * @note This is an exclusive helper for graph_get_subgraph_to_item.
- * @param orig_dag Original DAG with some n items, set to NULL after call and
+ * @param orig_dag Original DAG with some n items
  * free
  * @param i Target index
  * @return New heap allocated matrix of some m x m size
  */
 static struct graph_of_items *
-get_ancestor_dag(struct graph_of_items ***orig_dag, size_t i) {
+get_ancestor_dag(struct graph_of_items *orig_dag, size_t i) {
     /* Implements a BFS on a directed adjacency matrix */
-    const size_t n = (**orig_dag)->count;
-    item **items = (**orig_dag)->item_list;
-    uint8_t **adj_matrix = (**orig_dag)->adj_matrix;
-    free(**orig_dag);
-    *orig_dag = NULL;
+    const size_t n = orig_dag->count;
+    item **items = orig_dag->item_list;
+    uint8_t **adj_matrix = orig_dag->adj_matrix;
+    orig_dag = NULL;
 
     uint8_t *items_to_keep = malloc(n);
     if (!items_to_keep) return NULL;
@@ -386,6 +392,7 @@ get_ancestor_dag(struct graph_of_items ***orig_dag, size_t i) {
             }
             keep_i++;
         }
+        keep_j = 0;
     }
 
     free_matrix(&adj_matrix, n);
@@ -410,18 +417,19 @@ graph_get_subgraph_to_item(struct graph_of_items **super_graph,
     size_t target_index = item_array_find(
         (const item *const *)(*super_graph)->item_list, target_id);
 
-    return get_ancestor_dag(&super_graph, target_index);
+    struct graph_of_items *g = get_ancestor_dag(*super_graph, target_index);
+    free(*super_graph); /* Free and nullify the original graph */
+    *super_graph = NULL;
+    return g;
+
 }
 
 void graph_print_dag_with_item_fields(const struct graph_of_items *dag,
-                                      uint64_t print_flags) {
-    // TODO:
-    // 1. Start with sink (build up)
-    // 2.  -> Note: print in 'reverse' order?
-    //  (very memory intensive)
-    //  OR
-    // 1. Start at further source
-    // 2. Use git style graph * for text | for next
-    item_print_fancy(dag->item_list[0], print_flags | ITEM_PRINT_NO_NEWLINE,
-                     NULL);
+                                      sitem_id target, uint64_t print_flags) {
+    // TODO: See breakdown of git algorithm
+    // Find sources (nodes with corresponding columns of all 0s)
+    printf("Item %d is blocked by the following items:\n", target);
+
+    for (size_t i = 0; i < dag->count; i++)
+        item_print_fancy(dag->item_list[i], print_flags, NULL);
 }
