@@ -283,6 +283,12 @@ struct graph_of_items *graph_create_graph(item ***items,
 /**
  * @brief Reverse DFS (that is, 'against' directed edges) in a DAG, which has
  * already been deconstructed, note the implementation of get_ancestor_dag.
+ * @param adj_matrix Adjacency matrix of DAG
+ * @param visited Visited items, indices marked with 0 were not visited by the
+ * DFS
+ * @param start Node (as index) to start from (i.e. to look *up* inward edges)
+ * @param n Size of the graph (number of edges), note this is also the expected
+ * length of the visited parameter
  * @important Edges that are kept in adj_matrix are marked with UINT8_MAX
  * @important Items indices that are kept are marked as non-zero
  * @return The number of nodes found.
@@ -296,7 +302,7 @@ static size_t reverse_dag_dfs(uint8_t *const *adj_matrix, uint8_t *visited,
         if (has_edge((uint8_t const *const *)adj_matrix, start, i) &&
             !visited[i]) {
             visited[i] = 1;
-            adj_matrix[start][i] = UINT8_MAX;
+            adj_matrix[i][start] = UINT8_MAX;
             in_tree_size += reverse_dag_dfs(adj_matrix, visited, i, n);
         }
     }
@@ -306,8 +312,8 @@ static size_t reverse_dag_dfs(uint8_t *const *adj_matrix, uint8_t *visited,
 
 /**
  * @brief Get matrix of ancestor items in DAG from position i, this is assumed
- * to not contain cycles, but may not be connected.
- * @note This is an exclusive helper for graph_get_subgraph_to_item.
+ * to not contain cycles, but may not be connected. @note This is an exclusive
+ * helper for graph_get_subgraph_to_item.
  * @param orig_dag Original DAG with some n items
  * free
  * @param i Target index
@@ -385,15 +391,47 @@ graph_get_subgraph_to_item(struct graph_of_items **super_graph,
     return g;
 }
 
+int graph_has_edge(const struct graph_of_items *dag, sitem_id from,
+                   sitem_id to) {
+    size_t from_index =
+        item_array_find((const item *const *)dag->item_list, from);
+    size_t to_index = item_array_find((const item *const *)dag->item_list, to);
+    return has_edge((const uint8_t *const *)dag->adj_matrix, from_index,
+                    to_index);
+}
+
+/*
+ * @brief Print vertical graph, this is a very simple implementation
+ * @see graph_print_dag_with_item_field
+ */
+static void print_vertical_graph(const struct graph_of_items *dag,
+                                 sitem_id target, uint64_t print_flags) {
+    uint16_t items_printed = 0;
+    for (size_t i = 0; i < dag->count; i++) {
+        sitem_id i_id = dag->item_list[i]->item_id;
+        if (graph_has_edge(dag, i_id, target)) {
+            if (items_printed >= 1) {
+                printf("| * ");
+                item_print_fancy(dag->item_list[i],
+                                 print_flags | ITEM_PRINT_NO_NEWLINE, NULL);
+                printf("\n|/\n");
+            } else {
+                printf("* ");
+                item_print_fancy(dag->item_list[i],
+                                 print_flags | ITEM_PRINT_NO_NEWLINE, NULL);
+                printf("\n");
+            }
+            items_printed++;
+        }
+    }
+}
+
 void graph_print_dag_with_item_fields(const struct graph_of_items *dag,
                                       sitem_id target, uint64_t print_flags) {
-    // TODO: See breakdown of git algorithm
-    // Find sources (nodes with corresponding columns of all 0s)
+    assert(target >= 0 && "Target ID is negative when printing");
+    assert(dag && "Graph does not exist (NULL)");
+
     printf("Item %d is blocked by the following items:\n", target);
 
-    // TODO: Extract magic number
-    size_t dag_sources_indices[64] = {0};
-
-    for (size_t i = 0; i < dag->count; i++)
-        item_print_fancy(dag->item_list[i], print_flags, NULL);
+    print_vertical_graph(dag, target, print_flags);
 }

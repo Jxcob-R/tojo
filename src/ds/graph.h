@@ -160,13 +160,25 @@ extern struct graph_of_items *
 graph_get_subgraph_to_item(struct graph_of_items **super_graph,
                            sitem_id target_id);
 
-/**
- * @brief Print each node and edge in the DAG using item format/fancy printing
- * @see item_print_fancy
- * @param dag DAG of items to print
- * @param print_flags Flags to pass to item_print_fancy
+/*
+ * @brief Check if there is a dependency between two items in the item DAG
+ * @param dag Pointer to DAG
+ * @param from From item ID
+ * @param to To item ID
+ * @return 1 if a corresponding edge exists between the two items in the DAG
+ * @return 0 otherwise
  */
-extern void graph_print_dag_with_item_fields(const struct graph_of_items *dag,
-                                             sitem_id target,
-                                             uint64_t print_flags);
+extern int graph_has_edge(const struct graph_of_items *dag, sitem_id from,
+                          sitem_id to);
+
+    /**
+     * @brief Print each node and edge in the DAG using item format/fancy
+     * printing
+     * @see item_print_fancy
+     * @param dag DAG of items to print
+     * @param print_flags Flags to pass to item_print_fancy
+     */
+    extern void graph_print_dag_with_item_fields(
+        const struct graph_of_items *dag, sitem_id target,
+        uint64_t print_flags);
 #endif
