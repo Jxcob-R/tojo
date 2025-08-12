@@ -7,12 +7,12 @@
 
 #include <assert.h>
 #include <getopt.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pwd.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 /**
  * @brief Command struct representing a single valid command that traces to a
@@ -20,7 +20,7 @@
  */
 struct cmd {
     char *cmd_name;
-    int (*cmd_fn) (const int, char *const [], const char *);
+    int (*cmd_fn)(const int, char *const[], const char *);
 };
 
 /**
@@ -40,7 +40,7 @@ extern void tj_print_vers(void);
  * @return Number of options handled, negative value in the case of an invalid
  * set of options
  */
-extern int tj_handle_opts(const int argc, char * const argv[]);
+extern int tj_handle_opts(const int argc, char *const argv[]);
 
 /**
  * @brief Entry point for command handling
@@ -48,6 +48,6 @@ extern int tj_handle_opts(const int argc, char * const argv[]);
  * @param argv
  * @return Return code
  */
-extern int tj_main(const int argc, char * const argv[]);
+extern int tj_main(const int argc, char *const argv[]);
 
 #endif

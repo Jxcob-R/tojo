@@ -1,13 +1,13 @@
-#include "dev-utils/debug-out.h"
 #include "trie.h"
+#include "dev-utils/debug-out.h"
 
 /**
  * @brief Make an array of node pointers num long
  * @param num Length of pointer array
  * @return Pointer to head of array
  */
-static inline struct prefix_trie_node ** make_child_ptrs(unsigned int num) {
-    return (struct prefix_trie_node **) malloc(
+static inline struct prefix_trie_node **make_child_ptrs(unsigned int num) {
+    return (struct prefix_trie_node **)malloc(
         sizeof(struct prefix_trie_node *) * num);
 }
 
@@ -17,9 +17,9 @@ static inline struct prefix_trie_node ** make_child_ptrs(unsigned int num) {
  * @return NULL if allocation fails
  * @see malloc
  */
-static struct prefix_trie_node * init_node(const int num_children) {
-    struct prefix_trie_node *node = (struct prefix_trie_node *)
-                                     malloc(sizeof(struct prefix_trie_node));
+static struct prefix_trie_node *init_node(const int num_children) {
+    struct prefix_trie_node *node =
+        (struct prefix_trie_node *)malloc(sizeof(struct prefix_trie_node));
 
     if (!node)
         return node;
@@ -54,7 +54,8 @@ static struct prefix_trie_node * init_node(const int num_children) {
  * incorrectly; use carefully!
  */
 static void free_node(struct prefix_trie_node *node) {
-    if (!node) return;
+    if (!node)
+        return;
 
     free(node->children);
     free(node);
@@ -71,7 +72,7 @@ static void free_trie(struct prefix_trie_node *root) {
     for (unsigned int i = 0; i < root->initialised_children; i++) {
         free_trie(root->children[i]);
     }
-    
+
     free_node(root);
 }
 
@@ -134,9 +135,8 @@ static struct prefix_trie_node *get_child(const struct prefix_trie_node *parent,
 }
 
 void shortest_unique_prefix_lengths(const char *const *strings,
-                                     const int num_strings,
-                                     const int len, const int uniq_chars,
-                                     int *prefix_lengths) {
+                                    const int num_strings, const int len,
+                                    const int uniq_chars, int *prefix_lengths) {
     if (!strings) {
         return;
     }

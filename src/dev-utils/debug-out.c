@@ -16,7 +16,7 @@ static void print_prefix() {
 static void print_msg(const char *err_msg, int num_chars) {
     int msg_len = strlen(err_msg);
 
-    if (strlen(err_msg) >= (size_t) num_chars) {
+    if (strlen(err_msg) >= (size_t)num_chars) {
         fprintf(stderr, "%.*s", num_chars, err_msg);
     } else {
         /* Fill output with */
@@ -47,7 +47,7 @@ void log_err(const char *err_msg) {
     while (*current != '\0') {
         if (*current == '\n' || current - line_start == DEBUG_LINE_LIMIT) {
             print_prefix();
-            print_msg(line_start, (int) (current - line_start));
+            print_msg(line_start, (int)(current - line_start));
             print_suffix();
 
             line_start = current + 1;
@@ -66,6 +66,4 @@ void log_err(const char *err_msg) {
     fprintf(stderr, "\n");
 }
 
-void announce_debugging() {
-    log_err("This is the DEBUG build");
-}
+void announce_debugging() { log_err("This is the DEBUG build"); }

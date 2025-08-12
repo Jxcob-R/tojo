@@ -1,3 +1,6 @@
+<!-- This is very much a brief set of notes for myself to track progress on the
+project as it develops -->
+
 # Style Guide
 
 This is a guide as to how changes on the *main line* ought to be formatted,
@@ -41,6 +44,12 @@ stuff).
 
 Use C-native `assert()` to ensure invariant conditions are met at the start of
 functions; do not leave the success of a function call to chance.
+
+### LLVM Style
+
+In general, the default code/formatting style uses:
+- Relevant styling from [LLVM Coding Standards](https://llvm.org/docs/CodingStandards.html)
+- 4 space tab indentation
 
 ## Documentation
 

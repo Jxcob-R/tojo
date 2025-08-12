@@ -1,47 +1,45 @@
 #include "list.h"
+#include "config.h"
 #include "dir.h"
 #include "ds/graph.h"
 #include "ds/item.h"
-#include "opts.h"
-#include "config.h"
 #include "ds/trie.h"
+#include "opts.h"
 
 /* Option names */
 static const struct option list_long_options[] = {
-    {"help",    no_argument,            0, 'h'}, /* Help option */
-    {"all",     no_argument,            0, 'a'}, /* List all task items */
-    {"status",  required_argument,      0, 's'}, /* List all task items */
+    {"help", no_argument, 0, 'h'},               /* Help option */
+    {"all", no_argument, 0, 'a'},                /* List all task items */
+    {"status", required_argument, 0, 's'},       /* List all task items */
     {"dependencies", required_argument, 0, 'd'}, /* List item dependencies */
-    {0, 0, 0, 0}
-};
+    {0, 0, 0, 0}};
 
 static const char *list_short_options = "+has:d:";
 
-static const struct opt_fn list_option_fns[] = {
-    {'h', list_help,        NULL},
-    {'a', list_all_names,   NULL},
-    {'s', NULL,             list_by_status},
-    {'d', NULL,             list_dependencies},
-    {0, 0, 0}
-};
+static const struct opt_fn list_option_fns[] = {{'h', list_help, NULL},
+                                                {'a', list_all_names, NULL},
+                                                {'s', NULL, list_by_status},
+                                                {'d', NULL, list_dependencies},
+                                                {0, 0, 0}};
 
-int * list_item_code_prefixes(item *const *items) {
+int *list_item_code_prefixes(item *const *items) {
     /* Yes, I've assigned a macro to a variable, its because I'm paranoid */
     const unsigned int code_len = ITEM_CODE_LEN;
     unsigned int num_items;
-    for (num_items = 0; items[num_items]; num_items++);
+    for (num_items = 0; items[num_items]; num_items++)
+        ;
 
     /* Make char list from item codes */
-    const char **codes = (const char **)
-                                  malloc(sizeof(char *) * num_items);
+    const char **codes = (const char **)malloc(sizeof(char *) * num_items);
 
     for (unsigned int i = 0; i < num_items; i++)
         /* Create shallow copy in codes array */
         codes[i] = items[i]->item_code;
 
     /* Array to return */
-    int *code_prefix_lengths = (int *) malloc(sizeof(int) * num_items);
-    if (!code_prefix_lengths) return code_prefix_lengths;
+    int *code_prefix_lengths = (int *)malloc(sizeof(int) * num_items);
+    if (!code_prefix_lengths)
+        return code_prefix_lengths;
 
     shortest_unique_prefix_lengths(codes, num_items, code_len, ITEM_CODE_CHARS,
                                    code_prefix_lengths);
@@ -49,9 +47,8 @@ int * list_item_code_prefixes(item *const *items) {
     return code_prefix_lengths;
 }
 
-void list_help() { printf("%s %s - list items in project\n",
-           CONF_NAME_UPPER,
-           LIST_CMD_NAME);
+void list_help() {
+    printf("%s %s - list items in project\n", CONF_NAME_UPPER, LIST_CMD_NAME);
     printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, LIST_CMD_NAME);
     printf("\n");
     printf("\t-a, --all\tList all current tasks in project\n");
@@ -131,18 +128,20 @@ void list_by_status(const char *status_str) {
     unsigned int num_items = 0;
     item **list_items = item_array_init_empty(list_capacity);
 
-    if (!list_items) return;
+    if (!list_items)
+        return;
 
-    uint64_t duplicate_mask = get_dup_status_chars(status_str,
-                                                   ITEM_STATUS_COUNT);
+    uint64_t duplicate_mask =
+        get_dup_status_chars(status_str, ITEM_STATUS_COUNT);
 
-    /* 
+    /*
      * Since these are processed in order, this gives the user the ability to
      * customise the order of output.
      * Note that re-printing the same status is avoided
      */
     for (size_t i = 0; i < chars_in_status_str && i < ITEM_STATUS_COUNT; i++) {
-        if ((duplicate_mask >> i) & 1) continue; /* Duplicate */
+        if ((duplicate_mask >> i) & 1)
+            continue; /* Duplicate */
 
         item **status_items = NULL;
         switch (status_str[i]) {
@@ -169,7 +168,8 @@ void list_by_status(const char *status_str) {
                 list_items = item_array_resize(list_items, list_capacity);
             }
 
-            if (!list_items) return;
+            if (!list_items)
+                return;
 
             item_array_add(list_items + num_items, status_items, SIZE_MAX);
             num_items += new_num_items;
@@ -181,9 +181,7 @@ void list_by_status(const char *status_str) {
     print_list_items_codes(list_items, ITEM_PRINT_ID | ITEM_PRINT_NAME);
 
     if (strlen(status_str) > ITEM_STATUS_COUNT) {
-        puts(
-            "\nOnly the first three specified statuses where listed"
-        );
+        puts("\nOnly the first three specified statuses where listed");
     }
 }
 
@@ -204,13 +202,13 @@ void list_dependencies(const char *id_str) {
         graph_get_subgraph_to_item(&full_proj_dag, id);
 
     /* No item codes listed */
-    graph_print_dag_with_item_fields(target_dag, id, ITEM_PRINT_ID |
-                                                     ITEM_PRINT_NAME);
+    graph_print_dag_with_item_fields(target_dag, id,
+                                     ITEM_PRINT_ID | ITEM_PRINT_NAME);
 
     graph_free_graph(&target_dag);
 }
 
-int list_cmd(const int argc, char * const argv[], const char *proj_path) {
+int list_cmd(const int argc, char *const argv[], const char *proj_path) {
     assert(proj_path);
 
     if (*proj_path == '\0') {
@@ -218,10 +216,8 @@ int list_cmd(const int argc, char * const argv[], const char *proj_path) {
         return RET_NO_PROJ;
     }
 
-    const int opts_handled = opts_handle_opts(argc, argv,
-                                              list_short_options,
-                                              list_long_options,
-                                              list_option_fns);
+    const int opts_handled = opts_handle_opts(
+        argc, argv, list_short_options, list_long_options, list_option_fns);
 
     if (opts_handled < 0) {
         printf("Unknown options provided");
@@ -231,12 +227,8 @@ int list_cmd(const int argc, char * const argv[], const char *proj_path) {
     if (opts_handled == 0) {
         if (argc == 1)
             /* Ignore backlog by default -- see list_by_status */
-            list_by_status((const char []) { \
-                LIST_TODO_CHAR,
-                LIST_IP_CHAR,
-                LIST_DONE_CHAR,
-                0
-            });
+            list_by_status((const char[]){LIST_TODO_CHAR, LIST_IP_CHAR,
+                                          LIST_DONE_CHAR, 0});
         else
             list_by_status(argv[1]);
     }

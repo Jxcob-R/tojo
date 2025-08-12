@@ -31,10 +31,9 @@ struct prefix_trie_node {
  * strings.
  * @note All strings are assumed to be unique
  */
-extern void shortest_unique_prefix_lengths(const char *const * strings,
-                                           const int num_strings,
-                                           const int len,
+extern void shortest_unique_prefix_lengths(const char *const *strings,
+                                           const int num_strings, const int len,
                                            const int uniq_chars,
-                                           int * prefix_lengths);
+                                           int *prefix_lengths);
 
 #endif

@@ -31,6 +31,6 @@ extern void res_item_code(const char *code);
  * @param proj_path
  * @return return code
  */
-extern int res_cmd(const int argc, char * const argv[], const char *proj_path);
+extern int res_cmd(const int argc, char *const argv[], const char *proj_path);
 
 #endif

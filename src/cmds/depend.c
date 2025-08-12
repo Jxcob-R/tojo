@@ -11,22 +11,17 @@
 
 /* Option names */
 static const struct option dep_long_options[] = {
-    {"help",    no_argument,            0, 'h'}, /* Help option */
-    {"add",     required_argument,      0, 'a'},
-    {0, 0, 0, 0}
-};
+    {"help", no_argument, 0, 'h'}, /* Help option */
+    {"add", required_argument, 0, 'a'},
+    {0, 0, 0, 0}};
 
 static const char *dep_short_options = "+ha:";
 
 static const struct opt_fn dep_option_fns[] = {
-    {'h', dep_help,     NULL},
-    {'a', NULL,         dep_add_ids},
-    {0, 0, 0}
-};
+    {'h', dep_help, NULL}, {'a', NULL, dep_add_ids}, {0, 0, 0}};
 
 void dep_help(void) {
-    printf("%s %s - add a dependency between items\n",
-           CONF_NAME_UPPER,
+    printf("%s %s - add a dependency between items\n", CONF_NAME_UPPER,
            DEP_CMD_NAME);
     printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, DEP_CMD_NAME);
     printf("\n");
@@ -55,7 +50,7 @@ parse_dependencies_from_user(const char *dep_str,
     }
 
     /* Parse dependency string */
-    strtok((char *) dep_str, DEP_DELIM);
+    strtok((char *)dep_str, DEP_DELIM);
     sitem_id from = strtoll(dep_str, NULL, 10);
     if (!dir_contains_item_with_id(from)) {
         printf("No item in project with ID %d\n", from);
@@ -103,8 +98,7 @@ void dep_add_ids(const char *dep_str) {
         graph_free_dependency_list(&project_dependencies);
 }
 
-int dep_cmd(const int argc, char * const argv[],
-               const char *proj_path) {
+int dep_cmd(const int argc, char *const argv[], const char *proj_path) {
     assert(proj_path);
 
     if (*proj_path == '\0') {
@@ -112,16 +106,13 @@ int dep_cmd(const int argc, char * const argv[],
         return RET_NO_PROJ;
     }
 
-    const int opts_handled = opts_handle_opts(argc, argv,
-                                              dep_short_options,
-                                              dep_long_options,
-                                              dep_option_fns);
+    const int opts_handled = opts_handle_opts(argc, argv, dep_short_options,
+                                              dep_long_options, dep_option_fns);
 
     if (opts_handled < 0) {
         printf("Unknown options provided");
         return RET_INVALID_OPTS;
     }
-
 
     return 0;
 }

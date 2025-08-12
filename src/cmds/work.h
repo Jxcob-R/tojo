@@ -31,7 +31,6 @@ extern void work_on_item_code(const char *code);
  * @param proj_path
  * @return return code
  */
-extern int work_cmd(const int argc, char * const argv[],
-                    const char *proj_path);
+extern int work_cmd(const int argc, char *const argv[], const char *proj_path);
 
 #endif

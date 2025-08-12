@@ -17,33 +17,28 @@
 
 /* Option names */
 static const struct option tj_long_options[] = {
-    {"help",    no_argument,    0, 'h'}, /* Help option */
-    {"version", no_argument,    0, 'v'}, /* Version option */
-    {0, 0, 0, 0}
-};
+    {"help", no_argument, 0, 'h'},    /* Help option */
+    {"version", no_argument, 0, 'v'}, /* Version option */
+    {0, 0, 0, 0}};
 
 static const char *tj_short_options = "+hv";
 
 static const struct opt_fn tj_option_fns[] = {
-    {'h', tj_help,          NULL},
-    {'v', tj_print_vers,    NULL},
-    {0, 0, 0}
-};
+    {'h', tj_help, NULL}, {'v', tj_print_vers, NULL}, {0, 0, 0}};
 
 /* Commands */
 
 static const struct cmd tj_cmds[] = {
-    {ADD_CMD_NAME,  add_cmd},      /* Add an item */
-    {BACK_CMD_NAME, back_cmd},     /* Backlog an item */
-    {DEP_CMD_NAME,  dep_cmd},      /* Add dependency between items */
-    {INIT_CMD_NAME, init_cmd},     /* Project initialisation */
-    {LIST_CMD_NAME, list_cmd},     /* List items */
-    {WORK_CMD_NAME, work_cmd},     /* Commence work on an item */
-    {RES_CMD_NAME,  res_cmd},      /* Commence work on an item */
-    {NULL, NULL}
-};
+    {ADD_CMD_NAME, add_cmd},   /* Add an item */
+    {BACK_CMD_NAME, back_cmd}, /* Backlog an item */
+    {DEP_CMD_NAME, dep_cmd},   /* Add dependency between items */
+    {INIT_CMD_NAME, init_cmd}, /* Project initialisation */
+    {LIST_CMD_NAME, list_cmd}, /* List items */
+    {WORK_CMD_NAME, work_cmd}, /* Commence work on an item */
+    {RES_CMD_NAME, res_cmd},   /* Commence work on an item */
+    {NULL, NULL}};
 
-static const struct cmd * get_cmd(char *name) {
+static const struct cmd *get_cmd(char *name) {
     const struct cmd *target = NULL;
 
     for (unsigned int i = 0; tj_cmds[i].cmd_name != NULL; i++) {
@@ -58,7 +53,7 @@ static const struct cmd * get_cmd(char *name) {
 
 void tj_help() {
     printf("%s - Terminal TOdo JOtter:\n", CONF_NAME_UPPER);
-    printf("A CLI to-do tool that can help you track project progress"\
+    printf("A CLI to-do tool that can help you track project progress"
            "locally");
     printf("usage: %s [<options>]\n", CONF_CMD_NAME);
     printf("\n");
@@ -80,8 +75,7 @@ void tj_print_vers() {
     printf("For more versions go to %s\n", CONF_GITHUB);
 }
 
-
-int tj_main(const int argc, char * const argv[]) {
+int tj_main(const int argc, char *const argv[]) {
     assert(argv);
 
     const int opts_handled = opts_handle_opts(argc, argv, tj_short_options,
@@ -118,4 +112,3 @@ int tj_main(const int argc, char * const argv[]) {
     /* Pass control to sub-module with modified argc and argv */
     return subcommand->cmd_fn(argc - 1, argv + 1, proj_dir);
 }
-

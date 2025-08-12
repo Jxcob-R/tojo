@@ -8,16 +8,16 @@
  */
 const char item_code_chars[ITEM_CODE_CHARS + 1] = "abcdefghijklmnopqrstuvwxyz";
 
-item * item_init() {
-    item *itp = (item *) malloc(sizeof(item));
+item *item_init() {
+    item *itp = (item *)malloc(sizeof(item));
 
     itp->item_name = malloc(ITEM_NAME_MAX);
 
     return itp;
 }
 
-item ** item_array_init(int num_items) {
-    item **items = (item **) malloc(sizeof(item *) * (num_items + 1));
+item **item_array_init(int num_items) {
+    item **items = (item **)malloc(sizeof(item *) * (num_items + 1));
     if (items) {
         for (int i = 0; i < num_items; i++) {
             items[i] = item_init();
@@ -27,15 +27,15 @@ item ** item_array_init(int num_items) {
     return items;
 }
 
-item ** item_array_init_empty(int num_items) {
-    item **items = (item **) malloc(sizeof(item *) * (num_items + 1));
+item **item_array_init_empty(int num_items) {
+    item **items = (item **)malloc(sizeof(item *) * (num_items + 1));
     if (items) {
         memset(items, 0x0, num_items * sizeof(item *));
     }
     return items;
 }
 
-item ** item_array_resize(item **items, int num_items) {
+item **item_array_resize(item **items, int num_items) {
     item **tmp_item_arr = realloc(items, (num_items + 1) * sizeof(item *));
     if (!tmp_item_arr)
         return tmp_item_arr;
@@ -62,9 +62,9 @@ size_t item_array_find(const item *const *items, sitem_id id) {
     return SIZE_MAX;
 }
 
-
 size_t item_count_items(item *const *items) {
-    if (!items) return 0;
+    if (!items)
+        return 0;
     size_t count = 0;
 
     while (items[count])
@@ -75,7 +75,8 @@ size_t item_count_items(item *const *items) {
 void item_array_add(item **items_dest, item *const *items_src, const size_t n) {
     assert(items_dest);
 
-    if (!items_src) return;
+    if (!items_src)
+        return;
 
     /* Copy *at most* n items */
     for (size_t i = 0; i < n && items_src[i]; i++) {
@@ -103,7 +104,7 @@ void item_array_free(item ***arr, size_t max) {
     *arr = NULL;
 }
 
-void item_set_name(item *itp, char * name) {
+void item_set_name(item *itp, char *name) {
     assert(itp != NULL);
     itp->item_name = name;
 }
@@ -113,7 +114,7 @@ void item_set_name(item *itp, char * name) {
  * @param name String to trim
  * @return Start of string -- new
  */
-static char * trim_name_whitespace(char *name) {
+static char *trim_name_whitespace(char *name) {
     /* Trim leading whitespace */
     while (isspace(*name))
         name++;
@@ -125,7 +126,7 @@ static char * trim_name_whitespace(char *name) {
     }
 
     /* Trim trailing whitespace */
-    char* end = name + strlen(name) - 1;
+    char *end = name + strlen(name) - 1;
     while (end >= name && isspace(*end)) {
         end--;
     }
@@ -136,12 +137,13 @@ static char * trim_name_whitespace(char *name) {
 
 void item_set_name_deep(item *itp, const char *name, const size_t len) {
     assert(itp->item_name != NULL);
-    assert(name != NULL);   /* Represents an incorrect call */
-                            /* see item_set_name */
+    assert(name != NULL); /* Represents an incorrect call */
+                          /* see item_set_name */
     assert(len <= ITEM_NAME_MAX);
 
     char *new_name = malloc((strlen(name) + 1) * sizeof(char));
-    if (!new_name) return;
+    if (!new_name)
+        return;
     strcpy(new_name, name);
     char *new_start = trim_name_whitespace(new_name);
 
@@ -233,24 +235,20 @@ void item_print_fancy(const item *itp, uint64_t print_flags, void *arg) {
             highlight_chars = 0;
 
         if (is_tty)
-            printf(
-                "%s%.*s" _ITEM_PRINT_RESET_COL
-                _ITEM_PRINT_CODE_INACTIVE_COL "%.*s " _ITEM_PRINT_RESET_COL,
-                _ITEM_PRINT_ST_TO_COL(itp->item_st),
-                highlight_chars, itp->item_code,
-                ITEM_CODE_LEN - highlight_chars,
-                itp->item_code + highlight_chars
-            );
-        else 
+            printf("%s%.*s" _ITEM_PRINT_RESET_COL _ITEM_PRINT_CODE_INACTIVE_COL
+                   "%.*s " _ITEM_PRINT_RESET_COL,
+                   _ITEM_PRINT_ST_TO_COL(itp->item_st), highlight_chars,
+                   itp->item_code, ITEM_CODE_LEN - highlight_chars,
+                   itp->item_code + highlight_chars);
+        else
             printf("%s ", itp->item_name);
     }
     if (print_flags & ITEM_PRINT_NAME) {
         /* Name */
         if (is_tty)
             printf("%s%s " _ITEM_PRINT_RESET_COL,
-                   _ITEM_PRINT_ST_TO_COL(itp->item_st),
-                   itp->item_name);
-        else 
+                   _ITEM_PRINT_ST_TO_COL(itp->item_st), itp->item_name);
+        else
             printf("%s ", itp->item_name);
     }
 

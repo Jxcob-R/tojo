@@ -10,25 +10,20 @@
 
 /* Option names */
 static const struct option back_long_options[] = {
-    {"help",    no_argument,            0, 'h'}, /* Help option */
-    {"id",      required_argument,      0, 'i'}, /* ID backlog option */
-    {"code",    required_argument,      0, 'c'}, /* Code option */
-    {0, 0, 0, 0}
-};
+    {"help", no_argument, 0, 'h'},       /* Help option */
+    {"id", required_argument, 0, 'i'},   /* ID backlog option */
+    {"code", required_argument, 0, 'c'}, /* Code option */
+    {0, 0, 0, 0}};
 
 static const char *back_short_options = "+hi:c:";
 
-static const struct opt_fn back_option_fns[] = {
-    {'h', back_help,    NULL},
-    {'i', NULL,         back_item_id},
-    {'c', NULL,         back_item_code},
-    {0, 0, 0}
-};
+static const struct opt_fn back_option_fns[] = {{'h', back_help, NULL},
+                                                {'i', NULL, back_item_id},
+                                                {'c', NULL, back_item_code},
+                                                {0, 0, 0}};
 
 void back_help() {
-    printf("%s %s - place item in 'backlog'\n",
-           CONF_NAME_UPPER,
-           BACK_CMD_NAME);
+    printf("%s %s - place item in 'backlog'\n", CONF_NAME_UPPER, BACK_CMD_NAME);
     printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, BACK_CMD_NAME);
     printf("\n");
     printf("\t-h, --help\tBring up this help page\n");
@@ -82,8 +77,7 @@ void back_item_code(const char *code) {
     }
 }
 
-
-int back_cmd(const int argc, char * const argv[], const char *proj_path) {
+int back_cmd(const int argc, char *const argv[], const char *proj_path) {
     assert(proj_path);
 
     if (*proj_path == '\0') {
@@ -92,10 +86,7 @@ int back_cmd(const int argc, char * const argv[], const char *proj_path) {
     }
 
     const int opts_handled = opts_handle_opts(
-        argc, argv,
-                                              back_short_options,
-                                              back_long_options,
-                                              back_option_fns);
+        argc, argv, back_short_options, back_long_options, back_option_fns);
 
     if (opts_handled < 0) {
         printf("Unknown options provided");

@@ -10,39 +10,33 @@
 
 /* Option names */
 static const struct option add_long_options[] = {
-    {"help",    no_argument,            0, 'h'}, /* Help option */
-    {"name",    required_argument,      0, 'n'}, /* Name option */
-    {"code",    required_argument,      0, 'c'}, /* Code option */
-    {"restage", required_argument,      0, 'r'}, /* ID re-stage option */
-    {0, 0, 0, 0}
-};
+    {"help", no_argument, 0, 'h'},          /* Help option */
+    {"name", required_argument, 0, 'n'},    /* Name option */
+    {"code", required_argument, 0, 'c'},    /* Code option */
+    {"restage", required_argument, 0, 'r'}, /* ID re-stage option */
+    {0, 0, 0, 0}};
 
 static const char *add_short_options = "+hr:c:n:";
 
 static const struct opt_fn add_option_fns[] = {
-    {'h', add_help,     NULL},
-    {'r', NULL,         add_restage_item_id},
-    {'c', NULL,         add_restage_item_code},
-    {'n', NULL,         add_item_name},
-    {0, 0, 0}
-};
+    {'h', add_help, NULL},
+    {'r', NULL, add_restage_item_id},
+    {'c', NULL, add_restage_item_code},
+    {'n', NULL, add_item_name},
+    {0, 0, 0}};
 
 /**
  * Item to add on command execution
  * Modified by appropriate options and written to project at conclusion of
  * execution of command
  */
-static item it = {
-    .item_id = -1, 
-    .item_code = { "z" },
-    .item_name = (char[ITEM_NAME_MAX]) {"\0"},
-    .item_st = TODO
-};
+static item it = {.item_id = -1,
+                  .item_code = {"z"},
+                  .item_name = (char[ITEM_NAME_MAX]){"\0"},
+                  .item_st = TODO};
 
 void add_help() {
-    printf("%s %s - add todo item to project\n",
-           CONF_NAME_UPPER,
-           ADD_CMD_NAME);
+    printf("%s %s - add todo item to project\n", CONF_NAME_UPPER, ADD_CMD_NAME);
     printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, ADD_CMD_NAME);
     printf("\n");
     printf("\t-n, --name\tAdd item by name\n");
@@ -54,8 +48,7 @@ void add_help() {
     printf("usage: %s %s [<name>|<code>]\n", CONF_CMD_NAME, ADD_CMD_NAME);
     printf("\n");
     printf(
-        "Using a new item name will add the item to the project as 'todo'\n"
-    );
+        "Using a new item name will add the item to the project as 'todo'\n");
     printf("Using an established item code (or prefix) restages an item\n");
 }
 
@@ -108,10 +101,11 @@ void add_item_name(const char *name) {
     it.item_id = dir_next_id();
     item_set_code(&it);
 
-    printf("Added item '%s' to task list for project with id: %d\n", name, it.item_id);
+    printf("Added item '%s' to task list for project with id: %d\n", name,
+           it.item_id);
 }
 
-int add_cmd(const int argc, char * const argv[], const char *proj_path) {
+int add_cmd(const int argc, char *const argv[], const char *proj_path) {
     assert(proj_path);
 
     if (*proj_path == '\0') {
@@ -119,10 +113,8 @@ int add_cmd(const int argc, char * const argv[], const char *proj_path) {
         return RET_NO_PROJ;
     }
 
-    const int opts_handled = opts_handle_opts(argc, argv,
-                                              add_short_options,
-                                              add_long_options,
-                                              add_option_fns);
+    const int opts_handled = opts_handle_opts(argc, argv, add_short_options,
+                                              add_long_options, add_option_fns);
 
     if (opts_handled < 0) {
         printf("Unknown options provided");

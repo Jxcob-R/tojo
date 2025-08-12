@@ -1,6 +1,6 @@
+#include "resolve.h"
 #include "config.h"
 #include "dir.h"
-#include "resolve.h"
 #include "ds/item.h"
 #include "opts.h"
 
@@ -10,24 +10,20 @@
 
 /* Option names */
 static const struct option res_long_options[] = {
-    {"help",    no_argument,            0, 'h'}, /* Help option */
-    {"id",      required_argument,      0, 'i'}, /* ID option */
-    {"code",    required_argument,      0, 'c'}, /* Code option */
-    {0, 0, 0, 0}
-};
+    {"help", no_argument, 0, 'h'},       /* Help option */
+    {"id", required_argument, 0, 'i'},   /* ID option */
+    {"code", required_argument, 0, 'c'}, /* Code option */
+    {0, 0, 0, 0}};
 
 static const char *res_short_options = "+hi:c:";
 
-static const struct opt_fn res_option_fns[] = {
-    {'h', res_help,     NULL},
-    {'i', NULL,         res_item_id},
-    {'c', NULL,         res_item_code},
-    {0, 0, 0}
-};
+static const struct opt_fn res_option_fns[] = {{'h', res_help, NULL},
+                                               {'i', NULL, res_item_id},
+                                               {'c', NULL, res_item_code},
+                                               {0, 0, 0}};
 
 void res_help() {
-    printf("%s %s - fin todo item for staging\n",
-           CONF_NAME_UPPER,
+    printf("%s %s - fin todo item for staging\n", CONF_NAME_UPPER,
            RES_CMD_NAME);
     printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, RES_CMD_NAME);
     printf("\n");
@@ -37,8 +33,7 @@ void res_help() {
     printf("usage: %s %s [<code>]\n", CONF_CMD_NAME, RES_CMD_NAME);
     printf("\n");
     printf(
-        "Using an established item code (or prefix) marks item as resolved\n"
-    );
+        "Using an established item code (or prefix) marks item as resolved\n");
 }
 
 void res_item_id(const char *id_str) {
@@ -79,7 +74,7 @@ void res_item_code(const char *code) {
     }
 }
 
-int res_cmd(const int argc, char * const *argv, const char *proj_path) {
+int res_cmd(const int argc, char *const *argv, const char *proj_path) {
     assert(proj_path);
 
     if (*proj_path == '\0') {
@@ -87,10 +82,8 @@ int res_cmd(const int argc, char * const *argv, const char *proj_path) {
         return RET_NO_PROJ;
     }
 
-    const int opts_handled = opts_handle_opts(argc, argv,
-                                              res_short_options,
-                                              res_long_options,
-                                              res_option_fns);
+    const int opts_handled = opts_handle_opts(argc, argv, res_short_options,
+                                              res_long_options, res_option_fns);
 
     /* Using item code is default behaviour (i.e. using -c) */
     char *const arg = argv[1];

@@ -30,6 +30,6 @@
 #define MAX_PATH 4096
 #define MAX_PATH_LVLS 128
 
-#define HEX_LEN(type) (sizeof(type) * 2)    /* Length of type in hex */
+#define HEX_LEN(type) (sizeof(type) * 2) /* Length of type in hex */
 
 #endif

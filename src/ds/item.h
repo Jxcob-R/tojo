@@ -3,16 +3,16 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #define ITEM_NAME_MAX 256 /* Maximum item name length */
 
-#define ITEM_CODE_LEN 7 /* Length of an item code */
+#define ITEM_CODE_LEN 7    /* Length of an item code */
 #define ITEM_CODE_CHARS 26 /* Number of usable item code characters */
 
 /**
@@ -56,7 +56,7 @@ struct item {
  * @note Item name is also heap allocated
  * @warning Pointer returned may be NULL in case of failed malloc call
  */
-extern item * item_init(void);
+extern item *item_init(void);
 
 /**
  * @brief Allocate heap memory for a number of items and place pointers in array
@@ -64,7 +64,7 @@ extern item * item_init(void);
  * @return Array of num_items pointers to items terminated by a NULL pointer
  * @warning Pointer returned may be NULL in case of failed malloc call
  */
-extern item ** item_array_init(int num_items);
+extern item **item_array_init(int num_items);
 
 /**
  * @brief Allocate heap memory for an array of item pointers, and set all
@@ -73,7 +73,7 @@ extern item ** item_array_init(int num_items);
  * @return Array of num_items pointers, all pointing to NULL
  * @warning Pointer returned may be NULL in case of failed malloc call
  */
-extern item ** item_array_init_empty(int num_items);
+extern item **item_array_init_empty(int num_items);
 
 /**
  * @brief Reallocates the array of item pointers with a size of nmemb pointers
@@ -83,7 +83,7 @@ extern item ** item_array_init_empty(int num_items);
  * @return Pointer to new start of memory buffer
  * @return NULL if realloc call fails
  */
-extern item ** item_array_resize(item **items, int num_items);
+extern item **item_array_resize(item **items, int num_items);
 
 /**
  * @brief Find item with given ID in items pointer array
@@ -112,7 +112,7 @@ extern size_t item_count_items(item *const *items);
  * @warning May overflow
  */
 extern void item_array_add(item **items_dest, item *const *items_src,
-                              const size_t n);
+                           const size_t n);
 
 /**
  * @brief Free an item and all associated resources from memory
@@ -120,7 +120,6 @@ extern void item_array_add(item **items_dest, item *const *items_src,
  * this was the case when the function was called.
  */
 extern void item_free(item *itp);
-
 
 /**
  * @brief Free an item array, setting the array pointer to NULL afterwards
@@ -142,8 +141,7 @@ extern void item_set_name(item *itp, char *name);
  * @note Will insert null byte if the string name of size len characters is
  * not already null terminated (that is if name[len - 1] != '\0')
  */
-extern void item_set_name_deep(item *itp, const char *name,
-                               const size_t len);
+extern void item_set_name_deep(item *itp, const char *name, const size_t len);
 
 /**
  * @brief Sets a unique ITEM_CODE_LEN-lengthed code for an item. This is unique
@@ -166,10 +164,10 @@ extern int item_is_valid_code(const char *code);
 #define _ITEM_PRINT_ID_COL "\x1b[1m"
 
 /* Status colours from enum status */
-#define _ITEM_PRINT_ST_TO_COL(st) \
-    ((const char*[]){"\x1b[41m", "\x1b[33m", "\x1b[32m", "\x1b[34m"})[st]
+#define _ITEM_PRINT_ST_TO_COL(st)                                              \
+    ((const char *[]){"\x1b[41m", "\x1b[33m", "\x1b[32m", "\x1b[34m"})[st]
 
-#define _ITEM_PRINT_CODE_INACTIVE_COL "\x1b[90m" 
+#define _ITEM_PRINT_CODE_INACTIVE_COL "\x1b[90m"
 
 /* Reset colour */
 #define _ITEM_PRINT_RESET_COL "\x1b[0m"
@@ -177,7 +175,7 @@ extern int item_is_valid_code(const char *code);
 /* Print flags */
 #define ITEM_PRINT_ID (1 << 0)
 #define ITEM_PRINT_NAME (1 << 1)
-#define ITEM_PRINT_CODE \
+#define ITEM_PRINT_CODE                                                        \
     (1 << 2) /* Expects an int as arg, where 0 < arg < ITEM_CODE_LEN */
 #define ITEM_PRINT_NO_NEWLINE (1 << 3)
 

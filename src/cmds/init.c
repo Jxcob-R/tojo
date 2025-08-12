@@ -1,7 +1,7 @@
+#include "init.h"
 #include "config.h"
 #include "dir.h"
 #include "opts.h"
-#include "init.h"
 
 #ifdef DEBUG
 #include "dev-utils/debug-out.h"
@@ -9,21 +9,17 @@
 
 /* Option names */
 static const struct option init_long_options[] = {
-    {"help",    no_argument,    0, 'h'}, /* Help option */
-    {0, 0, 0, 0}
-};
+    {"help", no_argument, 0, 'h'}, /* Help option */
+    {0, 0, 0, 0}};
 
 static const char *init_short_options = "+h";
 
-static const struct opt_fn init_option_fns[] = {
-    {'h', init_help,    NULL},
-    {0, 0, 0}
-};
+static const struct opt_fn init_option_fns[] = {{'h', init_help, NULL},
+                                                {0, 0, 0}};
 
 void init_help() {
     printf("%s %s - Initialise a project at the current directory\n",
-           CONF_NAME_UPPER,
-           INIT_CMD_NAME);
+           CONF_NAME_UPPER, INIT_CMD_NAME);
     printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, INIT_CMD_NAME);
     printf("\n");
     printf("\t-h, --help\tBring up this help page\n");
@@ -45,13 +41,11 @@ int init_create_project() {
     return 0;
 }
 
-int init_cmd(const int argc, char * const argv[], const char *proj_path) {
+int init_cmd(const int argc, char *const argv[], const char *proj_path) {
     assert(proj_path);
 
-    const int opts_handled = opts_handle_opts(argc, argv,
-                                              init_short_options,
-                                              init_long_options,
-                                              init_option_fns);
+    const int opts_handled = opts_handle_opts(
+        argc, argv, init_short_options, init_long_options, init_option_fns);
 
     if (opts_handled < 0) {
         printf("Unknown options provided");

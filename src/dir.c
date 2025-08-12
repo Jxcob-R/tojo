@@ -1,25 +1,25 @@
 #include "dir.h"
 #include "config.h"
-#include "ds/item.h"
 #include "ds/graph.h"
+#include "ds/item.h"
 
 #ifdef DEBUG
 #include "dev-utils/debug-out.h"
 #endif
 
 /* Project directory */
-static char proj_path[MAX_PATH] =  { '\0' };
+static char proj_path[MAX_PATH] = {'\0'};
 
 /* Item storage */
-static char items_path[MAX_PATH] = { '\0' };
-static char backlog_path[MAX_PATH] ={ '\0' };
-static char todo_path[MAX_PATH] =   { '\0' };
-static char ip_path[MAX_PATH] =     { '\0' };
-static char done_path[MAX_PATH] =   { '\0' };
+static char items_path[MAX_PATH] = {'\0'};
+static char backlog_path[MAX_PATH] = {'\0'};
+static char todo_path[MAX_PATH] = {'\0'};
+static char ip_path[MAX_PATH] = {'\0'};
+static char done_path[MAX_PATH] = {'\0'};
 
-static char next_id_path[MAX_PATH] = { '\0' }; /* Next available item ID */
-static char listed_codes_path[MAX_PATH] = { '\0' }; /* Listed codes */
-static char item_dependencies[MAX_PATH] = { '\0' }; /* Item dependencies */
+static char next_id_path[MAX_PATH] = {'\0'};      /* Next available item ID */
+static char listed_codes_path[MAX_PATH] = {'\0'}; /* Listed codes */
+static char item_dependencies[MAX_PATH] = {'\0'}; /* Item dependencies */
 
 /**
  * @brief Set up global path variables to default values if not already done
@@ -29,7 +29,7 @@ static char item_dependencies[MAX_PATH] = { '\0' }; /* Item dependencies */
  * @note Modifies global variables, should be used once in a dir API call
  * @note Calling with NULL assumes that project path is already known
  */
-static void setup_path_names(const char * const path) {
+static void setup_path_names(const char *const path) {
     if (!*proj_path && path)
         strcpy(proj_path, path);
 
@@ -104,12 +104,8 @@ static int create_items() {
     }
 
     /* Open item storage files */
-    int file_creation = (
-        create_file(backlog_path) +
-        create_file(todo_path) +
-        create_file(ip_path) +
-        create_file(done_path)
-    );
+    int file_creation = (create_file(backlog_path) + create_file(todo_path) +
+                         create_file(ip_path) + create_file(done_path));
 
     if (file_creation != 0) {
 #ifdef DEBUG
@@ -133,8 +129,8 @@ static int create_items() {
  * @see close_items
  */
 static void open_items(const int flags, int item_fds[_DIR_ITEM_NUM_FILES]) {
-    assert(strlen(items_path)
-           >= sizeof(CONF_PROJ_DIR) + sizeof(_DIR_ITEM_PATH_D) - 1);
+    assert(strlen(items_path) >=
+           sizeof(CONF_PROJ_DIR) + sizeof(_DIR_ITEM_PATH_D) - 1);
 
     if (!item_fds)
         return;
@@ -200,7 +196,7 @@ static int open_items_status(enum status st, int flags) {
 /*
  * @brief Get the user's home directory
  */
-static char* get_home_directory() {
+static char *get_home_directory() {
     struct passwd *pw = getpwuid(getuid());
     return pw ? pw->pw_dir : NULL;
 }
@@ -212,12 +208,12 @@ static int is_accessible_directory(const char *path) {
     if (access(path, F_OK | R_OK | W_OK) != 0) {
         return 0;
     }
-    
+
     struct stat st;
     if (stat(path, &st) != 0) {
         return 0;
     }
-    
+
     return S_ISDIR(st.st_mode);
 }
 
@@ -226,11 +222,11 @@ static int is_accessible_directory(const char *path) {
  */
 static int move_up_directory(char *path) {
     char *last_slash = strrchr(path, '/');
-    
+
     if (last_slash == NULL || last_slash == path) {
         return -1;
     }
-    
+
     *last_slash = '\0';
     return 0;
 }
@@ -244,14 +240,15 @@ static int move_up_directory(char *path) {
 static void build_relative_path(char *dest, int levels_up,
                                 const char *target_dir) {
     dest[0] = '\0';
-    
+
     if (levels_up == 0) {
         strcpy(dest, target_dir);
         return;
     }
-    
+
     for (int i = 0; i < levels_up; i++) {
-        if (i > 0) strcat(dest, "/");
+        if (i > 0)
+            strcat(dest, "/");
         strcat(dest, "..");
     }
     strcat(dest, "/");
@@ -262,58 +259,58 @@ static void build_relative_path(char *dest, int levels_up,
  * @brief Search for target directory starting from current path, moving up
  * until home_dir
  */
-static int find_target_directory(const char *start_path, const char *home_dir, 
+static int find_target_directory(const char *start_path, const char *home_dir,
                                  const char *target_dir, int *levels_up) {
     char search_path[MAX_PATH];
     char test_path[MAX_PATH + sizeof(CONF_PROJ_DIR)];
-    
+
     strcpy(search_path, start_path);
     *levels_up = 0;
-    
+
     while (*levels_up < MAX_PATH_LVLS) {
         /* Check if we've reached the home directory (exclusive) */
         if (strcmp(search_path, home_dir) == 0) {
             return -1;
         }
-        
+
         /* Construct path to test */
         snprintf(test_path, sizeof(test_path), "%s/%s", search_path,
                  target_dir);
-        
+
         /* Test if directory exists and is accessible */
         if (is_accessible_directory(test_path)) {
-            return 0;  /* Found it! */
+            return 0; /* Found it! */
         }
-        
+
         /* Move up one directory level */
         if (move_up_directory(search_path) != 0) {
-            return -1;  /* Can't go up further */
+            return -1; /* Can't go up further */
         }
-        
+
         (*levels_up)++;
     }
-    
-    return -1;  /* Not found or too many levels */
+
+    return -1; /* Not found or too many levels */
 }
 
 int dir_find_project(char *dir) {
     assert(dir);
-    
+
     char cwd[MAX_PATH];
     char *home_dir;
     int levels_up;
-    
+
     /* Get current working directory */
     if (getcwd(cwd, sizeof(cwd)) == NULL) {
         return -1;
     }
-    
+
     /* Get home directory */
     home_dir = get_home_directory();
     if (home_dir == NULL) {
         return -1;
     }
-    
+
     /* Search for the target directory */
 
     if (find_target_directory(cwd, home_dir, CONF_PROJ_DIR, &levels_up) == 0) {
@@ -326,13 +323,13 @@ int dir_find_project(char *dir) {
 
         return 0;
     }
-    
+
     /* No project found */
     dir[0] = '\0';
     return -1;
 }
 
-void dir_construct_path(const char * const path, const char *base, char *buf,
+void dir_construct_path(const char *const path, const char *base, char *buf,
                         const size_t max) {
     if (!path || !base) {
         buf = NULL;
@@ -360,7 +357,8 @@ int dir_init(const char *path) {
 
     /* Parent project directory */
     int ret = mkdir(path, CONF_DIR_PERMS);
-    if (ret < 0) return ret;
+    if (ret < 0)
+        return ret;
 
     /* Set global variables */
     setup_path_names(path);
@@ -404,7 +402,7 @@ item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
      * Delimiter is guaranteed not to be a valid hex digit
      */
     const char *id = &entry[pos_in_entry];
-    item->item_id = (sitem_id) strtoll(id, NULL, 16);
+    item->item_id = (sitem_id)strtoll(id, NULL, 16);
     pos_in_entry += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
 
     /*
@@ -443,7 +441,7 @@ item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
  * @return item with data in entries file, heap allocated
  * @note entry_off must be the offset of the *first* byte of the item entry
  */
-static item * fd_read_item_at(int fd, off_t entry_off) {
+static item *fd_read_item_at(int fd, off_t entry_off) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
     assert(entry_off >= 0);
 
@@ -468,7 +466,7 @@ static item * fd_read_item_at(int fd, off_t entry_off) {
  */
 static int fd_total_items(const int fd, int entry_len) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
-    
+
     /* Use stat */
     struct stat sb;
     if (fstat(fd, &sb) < 0)
@@ -562,7 +560,6 @@ static off_t fd_find_entry_with_data(int fd, size_t entry_len,
 static sitem_id increment_next_id(int fd_next_id) {
     assert((fcntl(fd_next_id, F_GETFL) & O_ACCMODE) == O_RDWR);
 
-
     char curr_id_hex_str[HEX_LEN(sitem_id) + 1];
     char next_id_hex_str[HEX_LEN(sitem_id) + 1];
 
@@ -574,10 +571,10 @@ static sitem_id increment_next_id(int fd_next_id) {
         return -1;
     }
 
-    sitem_id curr_id = (sitem_id) strtoll(curr_id_hex_str, NULL, 16);
+    sitem_id curr_id = (sitem_id)strtoll(curr_id_hex_str, NULL, 16);
 
     snprintf(next_id_hex_str, sizeof(next_id_hex_str), "%0*X",
-             (int) HEX_LEN(sitem_id), curr_id + 1);
+             (int)HEX_LEN(sitem_id), curr_id + 1);
 
     if (pwrite(fd_next_id, next_id_hex_str, 2 * sizeof(sitem_id), 0) < 0) {
         close(fd_next_id);
@@ -628,7 +625,7 @@ int dir_contains_item_with_id(sitem_id id) {
     int item_fds[_DIR_ITEM_NUM_FILES];
     open_items(O_RDONLY, item_fds);
     char id_str[HEX_LEN(sitem_id) + 1];
-    snprintf(id_str, sizeof(id_str), "%0*X", (int) HEX_LEN(sitem_id), id);
+    snprintf(id_str, sizeof(id_str), "%0*X", (int)HEX_LEN(sitem_id), id);
     for (int i = 0; i < _DIR_ITEM_NUM_FILES; i++) {
         if (fd_find_entry_with_data(item_fds[i], DIR_ITEM_ENTRY_LEN, 0, id_str,
                                     _DIR_ITEM_FIELD_DELIM) >= 0) {
@@ -638,23 +635,24 @@ int dir_contains_item_with_id(sitem_id id) {
     return 0;
 }
 
-item ** dir_read_items_status(enum status st) {
+item **dir_read_items_status(enum status st) {
     setup_path_names(NULL);
 
     const int rd_flags = O_RDONLY;
     int fd = open_items_status(st, rd_flags);
-    if (fd == -1) return NULL;
+    if (fd == -1)
+        return NULL;
 
     int total_items = fd_total_items(fd, DIR_ITEM_ENTRY_LEN);
-    item **items = (item **) malloc(sizeof(item *) * (total_items + 1));
+    item **items = (item **)malloc(sizeof(item *) * (total_items + 1));
     if (!items)
         return NULL;
 
     char item_entry[DIR_ITEM_ENTRY_LEN + 1];
 
     for (int i = 0; i < total_items; i++) {
-        if (pread(fd, item_entry, sizeof(item_entry), i * DIR_ITEM_ENTRY_LEN)
-            < 0) {
+        if (pread(fd, item_entry, sizeof(item_entry), i * DIR_ITEM_ENTRY_LEN) <
+            0) {
 #ifdef DEBUG
             if (errno == EINVAL)
                 log_err("Attempting to read beyond items file");
@@ -662,8 +660,8 @@ item ** dir_read_items_status(enum status st) {
             break; /* Could not read for some reason -- this is ignored */
         }
         item_entry[DIR_ITEM_ENTRY_LEN] = '\0'; /* Not done by pread */
-        items[i] = entry_to_item(item_entry); /* Parse entry data */
-        items[i]->item_st = st; /* Set status */
+        items[i] = entry_to_item(item_entry);  /* Parse entry data */
+        items[i]->item_st = st;                /* Set status */
     }
 
     /* NULL terminate */
@@ -672,7 +670,7 @@ item ** dir_read_items_status(enum status st) {
     return items;
 }
 
-item ** dir_read_all_items() {
+item **dir_read_all_items() {
     setup_path_names(NULL);
 
     int total_items = dir_total_items();
@@ -686,17 +684,17 @@ item ** dir_read_all_items() {
 #endif
         return NULL;
     }
-    
+
     unsigned int items_read = 0;
 
     /* Iterate for all status types */
     for (int i = 0; i < ITEM_STATUS_COUNT; i++) {
-        item **items_of_same_st = dir_read_items_status((enum status) i);
+        item **items_of_same_st = dir_read_items_status((enum status)i);
 
         /* Copy NULL-terminated pointer array to total collection */
         for (size_t j = 0; (items[items_read] = items_of_same_st[j]) != NULL;
              j++) {
-            items[items_read]->item_st = (enum status) i; /* Set status */
+            items[items_read]->item_st = (enum status)i; /* Set status */
             items_read++;
         }
 
@@ -714,28 +712,25 @@ item ** dir_read_all_items() {
  * position
  */
 static void make_item_entry(const item *const itp,
-                           char buf[DIR_ITEM_ENTRY_LEN + 1]) {
+                            char buf[DIR_ITEM_ENTRY_LEN + 1]) {
     /* Field delimiter */
     const char delim[_DIR_ITEM_FIELD_DELIM_LEN + 1] = _DIR_ITEM_FIELD_DELIM;
-     /* Item terminator */
+    /* Item terminator */
     const char term[_DIR_ITEM_DELIM_LEN + 1] = _DIR_ITEM_DELIM;
 
     /* Bytes printed to buf */
     int b = 0;
 
     /* Parse item data */
-    b = snprintf(buf, DIR_ITEM_ENTRY_LEN + 1,
-                 "%0*X%s%.*s%s%-*s%s",
+    b = snprintf(buf, DIR_ITEM_ENTRY_LEN + 1, "%0*X%s%.*s%s%-*s%s",
                  /* Width and value of ID */
-                 (int) HEX_LEN(sitem_id), itp->item_id,
-                 delim,
-                 ITEM_CODE_LEN, itp->item_code,
-                 delim,
-                 ITEM_NAME_MAX, itp->item_name, /* Name */
+                 (int)HEX_LEN(sitem_id), itp->item_id, delim, ITEM_CODE_LEN,
+                 itp->item_code, delim, ITEM_NAME_MAX,
+                 itp->item_name, /* Name */
                  term);
 
     /* Handle errors */
-    if ((size_t) b < DIR_ITEM_ENTRY_LEN) {
+    if ((size_t)b < DIR_ITEM_ENTRY_LEN) {
         printf("Unable to save item, names must be less than %d characters\n",
                ITEM_NAME_MAX);
 #ifdef DEBUG
@@ -747,15 +742,15 @@ static void make_item_entry(const item *const itp,
 /**
  * @brief Helper for fd_search_for_entry_id -- does not assert invariants and is
  * therefore potentially dangerous to use in other contexts
- * @return >= 0 offset if item found 
+ * @return >= 0 offset if item found
  * @return < 0 offset if item is not found - position of where it *should* be
  * @note Does not deal with empty file case
  */
 static off_t _fd_bin_search_entry_id(const int fd, const sitem_id target,
                                      off_t start, off_t end) {
     off_t middle = (start + end) / 2 -
-                    /* Align to item entry offset */
-                    (((start + end) / 2) % DIR_ITEM_ENTRY_LEN);
+                   /* Align to item entry offset */
+                   (((start + end) / 2) % DIR_ITEM_ENTRY_LEN);
 
     /* This may cause some overhead in *very* large projects; future concern */
     item *start_item = fd_read_item_at(fd, start);
@@ -786,7 +781,8 @@ static off_t _fd_bin_search_entry_id(const int fd, const sitem_id target,
     }
     if (eid < target) {
         return -(end + DIR_ITEM_ENTRY_LEN);
-    } if (end - start == DIR_ITEM_ENTRY_LEN) {
+    }
+    if (end - start == DIR_ITEM_ENTRY_LEN) {
         /* Item should be between two others */
         return -end;
     }
@@ -801,7 +797,7 @@ static off_t _fd_bin_search_entry_id(const int fd, const sitem_id target,
 
 /**
  * @brief Search for an entry in a file, regardless of whether it exists or not
- * @param fd Open file descriptor 
+ * @param fd Open file descriptor
  * @param target_id Target item ID to find
  * @return >= 0: offset of location of item with target_id in fd;
  * @return < 0: offset of location that an item with target_id *would be*,
@@ -820,9 +816,11 @@ static off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
 #endif
         return -1;
     }
-    if (target_id < 0) return -1;
+    if (target_id < 0)
+        return -1;
 
-    off_t last_off = (fd_total_items(fd, DIR_ITEM_ENTRY_LEN) - 1) * DIR_ITEM_ENTRY_LEN;
+    off_t last_off =
+        (fd_total_items(fd, DIR_ITEM_ENTRY_LEN) - 1) * DIR_ITEM_ENTRY_LEN;
 
     /* Empty file */
     if (last_off < 0)
@@ -839,7 +837,7 @@ static off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
  * @return Pointer to heap allocated item with corresponding data
  * @return NULL if item cannot be found
  */
-static item * find_item_matching_field(const off_t pos, const char *data) {
+static item *find_item_matching_field(const off_t pos, const char *data) {
     int item_fds[_DIR_ITEM_NUM_FILES];
 
     item *itp = NULL;
@@ -854,11 +852,10 @@ static item * find_item_matching_field(const off_t pos, const char *data) {
             return itp;
         }
 
-        off_t item_offset = fd_find_entry_with_data(item_fds[i],
-                                                    DIR_ITEM_ENTRY_LEN, pos,
-                                           /* Will not work with *last* field */
-                                                    _DIR_ITEM_FIELD_DELIM,
-                                                    data);
+        off_t item_offset =
+            fd_find_entry_with_data(item_fds[i], DIR_ITEM_ENTRY_LEN, pos,
+                                    /* Will not work with *last* field */
+                                    _DIR_ITEM_FIELD_DELIM, data);
         if (item_offset >= 0) {
             char correct_entry[DIR_ITEM_ENTRY_LEN + 1];
             if (pread(item_fds[i], correct_entry, DIR_ITEM_ENTRY_LEN,
@@ -887,7 +884,7 @@ static item * find_item_matching_field(const off_t pos, const char *data) {
 static int fd_swap_item_entries_at(const int fd, const off_t off_a,
                                    const off_t off_b) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
-    
+
     /* Check proper flags */
     if ((fcntl(fd, F_GETFL) & O_ACCMODE) != O_RDWR) {
 #ifdef DEBUG
@@ -897,18 +894,20 @@ static int fd_swap_item_entries_at(const int fd, const off_t off_a,
     }
 
     /* Check offsets are valid */
-    off_t total_item_size = fd_total_items(fd, DIR_ITEM_ENTRY_LEN) * DIR_ITEM_ENTRY_LEN;
+    off_t total_item_size =
+        fd_total_items(fd, DIR_ITEM_ENTRY_LEN) * DIR_ITEM_ENTRY_LEN;
     /*
      * NOTE: NULL arg could produce undefined behaviour without previous call
      * to setup_path_names -- will be amended in future changes
      */
 
-    if (off_a < 0 || off_a >= total_item_size ||
-        off_b < 0 || off_b >= total_item_size) {
+    if (off_a < 0 || off_a >= total_item_size || off_b < 0 ||
+        off_b >= total_item_size) {
         return -1;
     }
 
-    if (off_a == off_b) return 0;
+    if (off_a == off_b)
+        return 0;
 
     char temp_entry_a[DIR_ITEM_ENTRY_LEN];
     char temp_entry_b[DIR_ITEM_ENTRY_LEN];
@@ -943,7 +942,8 @@ static int append_item_entry(const item *itp,
                              const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
     int open_flags = O_RDWR;
     int fd = open_items_status(itp->item_st, open_flags);
-    if (fd == -1) return -1;
+    if (fd == -1)
+        return -1;
 
     /* Ensure that the new item is placed in order */
     off_t new_item_pos = fd_search_for_entry_id(fd, itp->item_id);
@@ -968,9 +968,10 @@ static int append_item_entry(const item *itp,
     }
 
     /* Bubble old entry back up */
-    for (off_t i = (fd_total_items(fd, DIR_ITEM_ENTRY_LEN) - 1) * DIR_ITEM_ENTRY_LEN;
-        i > new_item_pos + (off_t) DIR_ITEM_ENTRY_LEN; i -= DIR_ITEM_ENTRY_LEN)
-    {
+    for (off_t i =
+             (fd_total_items(fd, DIR_ITEM_ENTRY_LEN) - 1) * DIR_ITEM_ENTRY_LEN;
+         i > new_item_pos + (off_t)DIR_ITEM_ENTRY_LEN;
+         i -= DIR_ITEM_ENTRY_LEN) {
         fd_swap_item_entries_at(fd, i, i - DIR_ITEM_ENTRY_LEN);
     }
     syncfs(fd);
@@ -989,7 +990,7 @@ int dir_append_item(const item *it) {
     /* Write item data to items file */
     if (append_item_entry(it, item_entry) < 0)
         return -1;
-    
+
     return 0;
 }
 
@@ -1018,8 +1019,7 @@ static int fd_remove_entry_at(const int fd, const off_t entry_off,
     }
 
     /* Bubble entry to end of file */
-    for (off_t i_off = entry_off; i_off < last_off;
-         i_off += entry_len) {
+    for (off_t i_off = entry_off; i_off < last_off; i_off += entry_len) {
         fd_swap_item_entries_at(fd, i_off, i_off + entry_len);
     }
 
@@ -1035,7 +1035,7 @@ static int fd_remove_entry_at(const int fd, const off_t entry_off,
 }
 
 int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
-    assert(new_status < ITEM_STATUS_COUNT); /* Validate status */
+    assert(new_status < ITEM_STATUS_COUNT);           /* Validate status */
     assert(_DIR_ITEM_NUM_FILES == ITEM_STATUS_COUNT); /* Expected structure */
 
     setup_path_names(NULL);
@@ -1054,11 +1054,11 @@ int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
 #endif
             return -1;
         }
-        off_t item_off = fd_search_for_entry_id(item_fds[i], id); 
+        off_t item_off = fd_search_for_entry_id(item_fds[i], id);
 
         if (item_off >= 0) {
             /* Status is already correct - exit from function */
-            if ((enum status) i == new_status)
+            if ((enum status)i == new_status)
                 break;
 
             int fd = item_fds[i];
@@ -1097,8 +1097,7 @@ int dir_change_item_status_id(const sitem_id id, const enum status new_status) {
     return 0;
 }
 
-void dir_write_item_codes(item *const *items,
-                          const int *prefix_lengths) {
+void dir_write_item_codes(item *const *items, const int *prefix_lengths) {
     assert(items != NULL);
     assert(prefix_lengths != NULL);
 
@@ -1113,14 +1112,12 @@ void dir_write_item_codes(item *const *items,
         assert(prefix_lengths[i] > 0 && prefix_lengths[i] <= ITEM_CODE_CHARS);
 
         int b = snprintf(curr_code_entry, sizeof(curr_code_entry),
-                         "%0*X%s%-*.*s%*s%s",
-                         (int) HEX_LEN(sitem_id), items[i]->item_id,
-                         _DIR_ITEM_FIELD_DELIM,
-                         pref_len, pref_len, items[i]->item_code,
-                             ITEM_CODE_LEN - pref_len, "",
-                         _DIR_ITEM_DELIM);
+                         "%0*X%s%-*.*s%*s%s", (int)HEX_LEN(sitem_id),
+                         items[i]->item_id, _DIR_ITEM_FIELD_DELIM, pref_len,
+                         pref_len, items[i]->item_code,
+                         ITEM_CODE_LEN - pref_len, "", _DIR_ITEM_DELIM);
 
-        if ((size_t) b < sizeof(curr_code_entry) - 1) { 
+        if ((size_t)b < sizeof(curr_code_entry) - 1) {
 #ifdef DEBUG
             log_err("A code entry could not be created for listed entries");
 #endif
@@ -1178,12 +1175,12 @@ sitem_id dir_get_id_from_prefix(const char *code_prefix) {
     int num_items_listed = sb.st_size / sizeof(curr_code_entry);
 
     for (int i = 0; i < num_items_listed; i++) {
-        pread(fd_listed_prefixes, curr_code_entry,
-              sizeof(curr_code_entry), i * sizeof(curr_code_entry));
+        pread(fd_listed_prefixes, curr_code_entry, sizeof(curr_code_entry),
+              i * sizeof(curr_code_entry));
 
         if (code_prefix_matches(
-            &curr_code_entry[HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN],
-            code_prefix)) {
+                &curr_code_entry[HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN],
+                code_prefix)) {
             found_id = strtoll(curr_code_entry, NULL, 16);
             break;
         }
@@ -1193,7 +1190,7 @@ sitem_id dir_get_id_from_prefix(const char *code_prefix) {
     return found_id;
 }
 
-item * dir_get_item_with_code(const char *full_code) {
+item *dir_get_item_with_code(const char *full_code) {
     assert(full_code);
 
     if (item_is_valid_code(full_code) < 0)
@@ -1202,7 +1199,7 @@ item * dir_get_item_with_code(const char *full_code) {
     setup_path_names(NULL);
 
     item *itp = find_item_matching_field(
-                    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN, full_code);
+        HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN, full_code);
 
     return itp;
 }
@@ -1219,15 +1216,15 @@ static void read_dependency(struct dependency *dep, const char *buf) {
     size_t buffer_index = 0;
 
     /* Parse *to* item ID - Delimiter is not in any part a valid hex digit */
-    dep->to = (sitem_id) strtoll(&buf[buffer_index], NULL, 16);
+    dep->to = (sitem_id)strtoll(&buf[buffer_index], NULL, 16);
     buffer_index += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
 
     /* Parse *from* ID */
-    dep->from = (sitem_id) strtoll(&buf[buffer_index], NULL, 16);
+    dep->from = (sitem_id)strtoll(&buf[buffer_index], NULL, 16);
     buffer_index += HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN;
-    
+
     /* Parse is_ghost */
-    dep->is_ghost = (int) strtoll(&buf[buffer_index], NULL, 2);
+    dep->is_ghost = (int)strtoll(&buf[buffer_index], NULL, 2);
 }
 
 /**
@@ -1244,33 +1241,29 @@ static void dependency_to_entry(const struct dependency *const dep, char *buf) {
     /* Item terminator */
     const char term[_DIR_ITEM_DELIM_LEN + 1] = _DIR_ITEM_DELIM;
 
-    int b = snprintf(buf, _DIR_DEPENDENCY_ENTRY_LEN + 1,
-                     "%0*X%s%0*X%s%d%s",
-                     (int) HEX_LEN(sitem_id), dep->to,
-                     delim,
-                     (int) HEX_LEN(sitem_id), dep->from,
-                     delim,
-                     dep->is_ghost > 0,
-                     term);
+    int b =
+        snprintf(buf, _DIR_DEPENDENCY_ENTRY_LEN + 1, "%0*X%s%0*X%s%d%s",
+                 (int)HEX_LEN(sitem_id), dep->to, delim, (int)HEX_LEN(sitem_id),
+                 dep->from, delim, dep->is_ghost > 0, term);
 
 #ifdef DEBUG
-    if ((size_t) b < _DIR_DEPENDENCY_ENTRY_LEN)
+    if ((size_t)b < _DIR_DEPENDENCY_ENTRY_LEN)
         log_err("Could not write dependency item as a string entry");
 #endif
 }
 
-struct dependency_list * dir_get_all_dependencies() {
+struct dependency_list *dir_get_all_dependencies() {
     setup_path_names(NULL);
 
     int fd = open(item_dependencies, O_RDONLY);
-    const int total_dependencies
-        = fd_total_items(fd, _DIR_DEPENDENCY_ENTRY_LEN); 
+    const int total_dependencies =
+        fd_total_items(fd, _DIR_DEPENDENCY_ENTRY_LEN);
     if (total_dependencies < 0)
         return NULL;
-    char dependency_entry[_DIR_DEPENDENCY_ENTRY_LEN] = { 0 };
+    char dependency_entry[_DIR_DEPENDENCY_ENTRY_LEN] = {0};
 
-    struct dependency_list *list
-        = graph_init_dependency_list(total_dependencies);
+    struct dependency_list *list =
+        graph_init_dependency_list(total_dependencies);
 
     struct dependency *new_dependency = NULL;
 
@@ -1333,8 +1326,8 @@ int dir_rm_dependency(const struct dependency *const dep) {
 
     char entry[_DIR_DEPENDENCY_ENTRY_LEN];
     dependency_to_entry(dep, entry);
-    off_t entry_pos = fd_find_entry_with_data(fd, _DIR_DEPENDENCY_ENTRY_LEN,
-                                              0, entry, _DIR_ITEM_DELIM);
+    off_t entry_pos = fd_find_entry_with_data(fd, _DIR_DEPENDENCY_ENTRY_LEN, 0,
+                                              entry, _DIR_ITEM_DELIM);
     if (entry_pos < 0) {
         return -1;
     }

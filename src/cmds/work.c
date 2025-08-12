@@ -9,37 +9,32 @@
 
 /* Option names */
 static const struct option work_long_options[] = {
-    {"help",    no_argument,            0, 'h'}, /* Help option */
-    {"id",      required_argument,      0, 'i'}, /* Name option */
-    {"code",    required_argument,      0, 'c'}, /* Code option */
-    {0, 0, 0, 0}
-};
+    {"help", no_argument, 0, 'h'},       /* Help option */
+    {"id", required_argument, 0, 'i'},   /* Name option */
+    {"code", required_argument, 0, 'c'}, /* Code option */
+    {0, 0, 0, 0}};
 
 static const char *work_short_options = "+hi:c:";
 
-static const struct opt_fn work_option_fns[] = {
-    {'h', work_help,    NULL},
-    {'i', NULL,         work_on_item_id},
-    {'c', NULL,         work_on_item_code},
-    {0, 0, 0}
-};
+static const struct opt_fn work_option_fns[] = {{'h', work_help, NULL},
+                                                {'i', NULL, work_on_item_id},
+                                                {'c', NULL, work_on_item_code},
+                                                {0, 0, 0}};
 
 void work_help() {
-    printf("%s %s - work todo item for staging\n",
-           CONF_NAME_UPPER,
+    printf("%s %s - work todo item for staging\n", CONF_NAME_UPPER,
            WORK_CMD_NAME);
     printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, WORK_CMD_NAME);
     printf("\n");
     printf("\t-i, --id\tMove item with specified ID to in progress; "
-                        "item may have any state\n");
+           "item may have any state\n");
     printf("\t-c, --code\tWork on an item with the given code\n");
     printf("\t-h, --help\tBring up this help page\n");
     printf("\n");
     printf("usage: %s %s [<code>]\n", CONF_CMD_NAME, WORK_CMD_NAME);
     printf("\n");
-    printf(
-        "Using an established item code (or prefix) marks item as in-progress\n"
-    );
+    printf("Using an established item code (or prefix) marks item as "
+           "in-progress\n");
 }
 
 void work_on_item_id(const char *id_str) {
@@ -81,7 +76,7 @@ void work_on_item_code(const char *code) {
     }
 }
 
-int work_cmd(const int argc, char * const argv[], const char *proj_path) {
+int work_cmd(const int argc, char *const argv[], const char *proj_path) {
     assert(proj_path);
 
     if (*proj_path == '\0') {
@@ -89,10 +84,8 @@ int work_cmd(const int argc, char * const argv[], const char *proj_path) {
         return RET_NO_PROJ;
     }
 
-    const int opts_handled = opts_handle_opts(argc, argv,
-                                              work_short_options,
-                                              work_long_options,
-                                              work_option_fns);
+    const int opts_handled = opts_handle_opts(
+        argc, argv, work_short_options, work_long_options, work_option_fns);
 
     /* Using item code is default behaviour (i.e. using -c) */
     char *const arg = argv[1];

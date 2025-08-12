@@ -25,7 +25,7 @@ extern void dep_help(void);
  * @param dep_str Dependency string with particular formatting expectations:
  * FORM: "a:b[,x]"
  * - This represents adding some item b and any other items "x" as a
- *   dependency/ies to some item a, 
+ *   dependency/ies to some item a,
  * - Each item is represented by its ID
  * @note Strings of an invalid form will do nothing
  */
@@ -38,7 +38,6 @@ extern void dep_add_ids(const char *dep_str);
  * @param proj_path
  * @return return code
  */
-extern int dep_cmd(const int argc, char * const argv[],
-                    const char *proj_path);
+extern int dep_cmd(const int argc, char *const argv[], const char *proj_path);
 
 #endif

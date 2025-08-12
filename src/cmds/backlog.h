@@ -31,6 +31,6 @@ extern void back_item_code(const char *code);
  * @param proj_path
  * @return return code
  */
-extern int back_cmd(const int argc, char * const argv[], const char *proj_path);
+extern int back_cmd(const int argc, char *const argv[], const char *proj_path);
 
 #endif

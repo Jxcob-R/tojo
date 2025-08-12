@@ -63,9 +63,9 @@ graph_init_dependency_list(unsigned int initial_capacity);
 /**
  * @brief Create new simple edge dependency given 2 item IDs and ghost status
  */
-extern struct dependency * graph_new_dependency(const sitem_id from,
-                                                const sitem_id to,
-                                                const sitem_id is_ghost);
+extern struct dependency *graph_new_dependency(const sitem_id from,
+                                               const sitem_id to,
+                                               const sitem_id is_ghost);
 
 /**
  * @brief Add new dependency struct to the list of current dependencies
@@ -73,9 +73,8 @@ extern struct dependency * graph_new_dependency(const sitem_id from,
  * @return -1 in case of some error
  * @note turns the pointer referencing new_dependency to NULL
  */
-extern int
-graph_new_dependency_to_list(struct dependency_list *list,
-                             struct dependency **new_dependency);
+extern int graph_new_dependency_to_list(struct dependency_list *list,
+                                        struct dependency **new_dependency);
 
 /**
  * @brief Test if two dependency structs hold the same data
@@ -88,14 +87,14 @@ graph_new_dependency_to_list(struct dependency_list *list,
 extern int graph_dependencies_equal(struct dependency *a, struct dependency *b);
 
 /**
-* @brief Check if an item has any dependencies listed in the dependency list
-* @param list List of dependencies to search
-* @param itp Item to find dependency for
-* @return 1 if item has dependency
-* @return 0 if item does not have dependency
-* @note That 0 can be returned either if the item is a source in the DAG
-* constructed by the dependency list, or is not present at all.
-*/
+ * @brief Check if an item has any dependencies listed in the dependency list
+ * @param list List of dependencies to search
+ * @param itp Item to find dependency for
+ * @return 1 if item has dependency
+ * @return 0 if item does not have dependency
+ * @note That 0 can be returned either if the item is a source in the DAG
+ * constructed by the dependency list, or is not present at all.
+ */
 extern int graph_item_has_dependency(const struct dependency_list *list,
                                      const item *itp);
 
@@ -136,16 +135,16 @@ graph_remove_duplicates(struct dependency_list **list,
 extern void graph_free_graph(struct graph_of_items **graph);
 
 /**
-* @brief Create dependency graph from list of items and list of dependencies
-* *upwards* from a given target item
-* @param items Pointer to array of items terminated by a NULL pointer, is set to
-* NULL after call.
-* @param list List of edges found, the final DAG will constitute some *subset*
-* of this list is set to NULL after function call
-* @return Graph as adjacency matrix
-*/
-extern struct graph_of_items *
-graph_create_graph(item ***items, struct dependency_list **list);
+ * @brief Create dependency graph from list of items and list of dependencies
+ * *upwards* from a given target item
+ * @param items Pointer to array of items terminated by a NULL pointer, is set
+ * to NULL after call.
+ * @param list List of edges found, the final DAG will constitute some *subset*
+ * of this list is set to NULL after function call
+ * @return Graph as adjacency matrix
+ */
+extern struct graph_of_items *graph_create_graph(item ***items,
+                                                 struct dependency_list **list);
 
 /**
  * @brief Obtain the relevant subgraph of the DAG super_graph that contains the
@@ -167,7 +166,7 @@ graph_get_subgraph_to_item(struct graph_of_items **super_graph,
  * @param dag DAG of items to print
  * @param print_flags Flags to pass to item_print_fancy
  */
-extern void
-graph_print_dag_with_item_fields(const struct graph_of_items *dag,
-                                 sitem_id target, uint64_t print_flags);
+extern void graph_print_dag_with_item_fields(const struct graph_of_items *dag,
+                                             sitem_id target,
+                                             uint64_t print_flags);
 #endif

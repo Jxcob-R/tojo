@@ -16,7 +16,7 @@
  * These are defined in the list implementation since we do not need this
  * information anywhere else, that is, these short-hands may change
  * independently to back-end modules
- * 
+ *
  * These are guaranteed to be strings of length ONE
  */
 #define LIST_BACKLOG_CHAR 'b'
@@ -32,7 +32,7 @@
  * @note This is a utility function -- not a command
  * @see shortest_unique_prefix_lengths
  */
-extern int * list_item_code_prefixes(item *const *items);
+extern int *list_item_code_prefixes(item *const *items);
 
 /**
  * @brief Show help for list command
@@ -65,7 +65,6 @@ extern void list_dependencies(const char *id_str);
  * @param open_project whether there is an open project
  * @return Exit code
  */
-extern int list_cmd(const int argc, char * const argv[],
-                    const char *proj_path);
+extern int list_cmd(const int argc, char *const argv[], const char *proj_path);
 
 #endif

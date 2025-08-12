@@ -1,6 +1,6 @@
 /**
  * @brief Directory module for interfacing with project data directory
- * 
+ *
  * A plain-text data writing protocol has been implemented in release 0.1,
  * which may be subject to future change.
  *
@@ -28,8 +28,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "ds/item.h"
 #include "ds/graph.h"
+#include "ds/item.h"
 
 /*
  * Project directory substructure
@@ -45,7 +45,7 @@
 
 #define _DIR_NEXT_ID_F "NEXT_ID"        /* Next available item ID */
 #define _DIR_CODE_LIST_F "LISTED_CODES" /* Codes listed in previous list */
-#define _DIR_DEPENDENICES_F \
+#define _DIR_DEPENDENICES_F                                                    \
     "ITEM_DEPENDENCIES" /* Dependencies listed as a pair of item IDs*/
 
 /**
@@ -54,44 +54,35 @@
  * @note _SZ = sizeof(...) value
  */
 
-#define _DIR_ITEM_DELIM "\n"        /* Item delimiter - note char * type */
+#define _DIR_ITEM_DELIM "\n" /* Item delimiter - note char * type */
 #define _DIR_ITEM_DELIM_LEN (sizeof(_DIR_ITEM_DELIM) - 1)
 
 #define _DIR_ITEM_FIELD_DELIM ":" /* Item field delimiter */
 #define _DIR_ITEM_FIELD_DELIM_LEN (sizeof(_DIR_ITEM_FIELD_DELIM) - 1)
 
 /* Item entry format */
-#define DIR_ITEM_ENTRY_LEN \
-(   /* Item ID */ \
-    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
-    + /* Item character code */ \
-    ITEM_CODE_LEN + _DIR_ITEM_FIELD_DELIM_LEN \
-    + /* Item name */ \
-    ITEM_NAME_MAX + _DIR_ITEM_DELIM_LEN \
-)
+#define DIR_ITEM_ENTRY_LEN                                                     \
+    (                                                /* Item ID */             \
+     HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN + /* Item character code */ \
+     ITEM_CODE_LEN + _DIR_ITEM_FIELD_DELIM_LEN +     /* Item name */           \
+     ITEM_NAME_MAX + _DIR_ITEM_DELIM_LEN)
 
-#define _DIR_CODE_ENTRY_LEN \
-(   /* Item ID */ \
-    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
-     + /* Item character code */ \
-    ITEM_CODE_LEN + _DIR_ITEM_DELIM_LEN \
-)
+#define _DIR_CODE_ENTRY_LEN                                                    \
+    (                                                /* Item ID */             \
+     HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN + /* Item character code */ \
+     ITEM_CODE_LEN + _DIR_ITEM_DELIM_LEN)
 
 /* Writing item dependencies */
 
 #define _DIR_GHOST_DEPENDENCY_CHAR '1'
 #define _DIR_NO_GHOST_DEPENDENCY_CHAR '0'
 
-#define _DIR_DEPENDENCY_ENTRY_LEN \
-(   /* Item ID of dependee */ \
-    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
-    + /* Item ID of dependent item */ \
-    HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN \
-    + /* Ghost or not */ \
-    1 \
-    + \
-    _DIR_ITEM_DELIM_LEN \
-)
+#define _DIR_DEPENDENCY_ENTRY_LEN                                              \
+    (/* Item ID of dependee */                                                 \
+     HEX_LEN(sitem_id) +                                                       \
+     _DIR_ITEM_FIELD_DELIM_LEN + /* Item ID of dependent item */               \
+     HEX_LEN(sitem_id) + _DIR_ITEM_FIELD_DELIM_LEN + /* Ghost or not */        \
+     1 + _DIR_ITEM_DELIM_LEN)
 
 /* Other macros */
 #define OFF_T_MIN ((off_t)(((off_t)1) << (sizeof(off_t) * 8 - 1)))
@@ -117,7 +108,7 @@ int dir_find_project(char *dir);
  * @note Does not check if the base is a member of the directory provided
  * by path, nor are any other existence checks made
  */
-extern void dir_construct_path(const char * const path, const char *base,
+extern void dir_construct_path(const char *const path, const char *base,
                                char *buf, const size_t max);
 
 /**
@@ -159,7 +150,7 @@ extern int dir_contains_item_with_id(sitem_id id);
  * @param st Status of items to read
  * @return NULL-terminated array of item pointers allocated on the heap
  */
-extern item ** dir_read_items_status(enum status st);
+extern item **dir_read_items_status(enum status st);
 
 /**
  * @brief Read all items in project at path
@@ -168,7 +159,7 @@ extern item ** dir_read_items_status(enum status st);
  * @note Function *only* extracts names as of now which are assumed to be
  * separated by some _DIR_ITEM_DELIM
  */
-extern item ** dir_read_all_items(void);
+extern item **dir_read_all_items(void);
 
 /**
  * @brief Append write the item it to the project.
@@ -189,14 +180,13 @@ extern int dir_change_item_status_id(const sitem_id id,
                                      const enum status new_status);
 
 /**
-* @brief Store item codes of items in project
-* @param items List of item pointers, terminated by a NULL pointer
-* @param prefix_lengths List of unique prefix lengths of codes, corresponding to
-* elements in items
-* @see dir_get_id_from_prefix
-*/
-extern void dir_write_item_codes(item *const *items,
-                                 const int *prefix_lengths);
+ * @brief Store item codes of items in project
+ * @param items List of item pointers, terminated by a NULL pointer
+ * @param prefix_lengths List of unique prefix lengths of codes, corresponding
+ * to elements in items
+ * @see dir_get_id_from_prefix
+ */
+extern void dir_write_item_codes(item *const *items, const int *prefix_lengths);
 
 /**
  * @brief Return the ID of the item associated with the listed code prefix
@@ -214,14 +204,14 @@ extern sitem_id dir_get_id_from_prefix(const char *code_prefix);
  * @param full_code Full ITEM_CODE_LEN code (may or may not be null terminated).
  * @return Heap-allocated pointer to item with associated code
  */
-extern item * dir_get_item_with_code(const char *full_code);
+extern item *dir_get_item_with_code(const char *full_code);
 
 /**
  * @brief Read dependencies listed in project
  * @return Heap-allocacted dependency set
  * @return NULL in case of some error
  */
-extern struct dependency_list * dir_get_all_dependencies(void);
+extern struct dependency_list *dir_get_all_dependencies(void);
 
 /**
  * @brief Add a list of dependencies to the project
@@ -236,7 +226,7 @@ extern void dir_add_dependency_list(const struct dependency_list *const list);
 extern void dir_add_dependency(const struct dependency *const dep);
 
 /**
- * @brief 
+ * @brief
  * @return 0 if dependency is removed
  * @return -1 if dependency does not exist
  * @return -2 if some other error occurs

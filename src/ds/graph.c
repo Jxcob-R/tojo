@@ -1,28 +1,25 @@
+#include "graph.h"
 #include "dev-utils/debug-out.h"
 #include "ds/item.h"
 #include "item.h"
-#include "graph.h"
 
 /**
  * @brief Free simple edge dependency
  * @param dep Dependency to free
  */
-static void free_dependency(struct dependency *dep) {
-    free(dep);
-}
+static void free_dependency(struct dependency *dep) { free(dep); }
 
 /**
  * @brief Return new dependency on the heap; helper for
  * graph_init_dependency_list
- * @param from 
- * @param to 
- * @param is_ghost 
+ * @param from
+ * @param to
+ * @param is_ghost
  * @return Pointer to newly allocated dependency
  * @return NULL if malloc fails
  */
-static struct dependency * new_dependency(const sitem_id from,
-                                          const sitem_id to,
-                                          const int is_ghost) {
+static struct dependency *new_dependency(const sitem_id from, const sitem_id to,
+                                         const int is_ghost) {
     struct dependency *d = malloc(sizeof(struct dependency));
     d->from = from;
     d->to = to;
@@ -39,8 +36,8 @@ static void grow_list(struct dependency_list *list) {
     if (list->capacity == 0)
         list->capacity = GRAPH_INIT_CAPACITY;
     while (!ptr)
-        ptr = realloc(list, sizeof(struct dependency_list) *
-                      list->capacity * 2);
+        ptr =
+            realloc(list, sizeof(struct dependency_list) * list->capacity * 2);
     list->dependencies[list->capacity] = NULL;
     list->capacity *= 2;
     list->dependencies = ptr;
@@ -92,7 +89,7 @@ static uint8_t **init_matrix(size_t n) {
 
 /**
  * @brief Free adjacency matrix
- * @param mat Matrix on heap to free, set to 
+ * @param mat Matrix on heap to free, set to
  */
 static void free_matrix(uint8_t ***mat, size_t n) {
     for (size_t i = 0; i < n; i++) {
@@ -105,7 +102,7 @@ static void free_matrix(uint8_t ***mat, size_t n) {
 /**
  * @brief Initialise a new graph of items with NULL/zeroed fields
  */
-struct graph_of_items * init_graph() {
+struct graph_of_items *init_graph() {
     struct graph_of_items *graph = malloc(sizeof(struct graph_of_items));
     graph->count = 0;
     graph->adj_matrix = NULL;
@@ -135,10 +132,10 @@ static void create_matrix(struct graph_of_items *graph,
     for (unsigned int i = 0; i < list->count; i++) {
         from_id = list->dependencies[i]->from;
         to_id = list->dependencies[i]->to;
-        index_of_from = item_array_find((const item *const *)graph->item_list,
-                                        from_id);
-        index_of_to = item_array_find((const item *const *)graph->item_list,
-                                      to_id);
+        index_of_from =
+            item_array_find((const item *const *)graph->item_list, from_id);
+        index_of_to =
+            item_array_find((const item *const *)graph->item_list, to_id);
         /* Mark edge*/
         adj_matrix[index_of_from][index_of_to] = 1;
     }
@@ -151,8 +148,7 @@ static void create_matrix(struct graph_of_items *graph,
  */
 static int dependencies_are_equal(const struct dependency *first,
                                   const struct dependency *second) {
-    return first->from == second->from &&
-           first->to == second->to &&
+    return first->from == second->from && first->to == second->to &&
            first->is_ghost == second->is_ghost;
 }
 
@@ -160,8 +156,8 @@ struct dependency_list *
 graph_init_dependency_list(unsigned int initial_capacity) {
     struct dependency **dep_list = NULL;
     /* Set list itself */
-    unsigned int capacity
-        = initial_capacity != 0 ? initial_capacity : GRAPH_INIT_CAPACITY;
+    unsigned int capacity =
+        initial_capacity != 0 ? initial_capacity : GRAPH_INIT_CAPACITY;
     dep_list = malloc(capacity * sizeof(struct dependency *));
     dep_list[0] = NULL;
 #ifdef DEBUG
@@ -178,14 +174,13 @@ graph_init_dependency_list(unsigned int initial_capacity) {
     return list;
 }
 
-struct dependency * graph_new_dependency(const sitem_id from,
-                                         const sitem_id to,
-                                         const sitem_id is_ghost) {
+struct dependency *graph_new_dependency(const sitem_id from, const sitem_id to,
+                                        const sitem_id is_ghost) {
     return new_dependency(from, to, is_ghost);
 }
 
 int graph_new_dependency_to_list(struct dependency_list *list,
-                                struct dependency **new_dependency) {
+                                 struct dependency **new_dependency) {
     if (!*new_dependency) {
         return -1;
     }
@@ -224,12 +219,12 @@ graph_remove_duplicates(struct dependency_list **list,
 
     struct dependency_list *new_list =
         graph_init_dependency_list((*list)->count);
-    
+
     int is_duplicated = 0;
     for (unsigned int i = 0; i < (*list)->count; i++) {
         for (unsigned int j = 0; j < reference_list->count; j++) {
             if (graph_dependencies_equal((*list)->dependencies[i],
-                                          reference_list->dependencies[j])) {
+                                         reference_list->dependencies[j])) {
                 is_duplicated = 1;
                 break;
             }
@@ -270,8 +265,8 @@ void graph_free_graph(struct graph_of_items **graph) {
     *graph = NULL;
 }
 
-struct graph_of_items *
-graph_create_graph(item ***items, struct dependency_list **list) {
+struct graph_of_items *graph_create_graph(item ***items,
+                                          struct dependency_list **list) {
     size_t item_count = item_count_items(*items);
     if (item_count == 0)
         return NULL;
@@ -299,8 +294,7 @@ static size_t reverse_dag_dfs(uint8_t *const *adj_matrix, uint8_t *visited,
     size_t in_tree_size = 1; /* We count the starting node, so always >= 1 */
     for (size_t i = 0; i < n; i++) {
         if (has_edge((uint8_t const *const *)adj_matrix, start, i) &&
-            !visited[i])
-        {
+            !visited[i]) {
             visited[i] = 1;
             adj_matrix[start][i] = UINT8_MAX;
             in_tree_size += reverse_dag_dfs(adj_matrix, visited, i, n);
@@ -319,8 +313,8 @@ static size_t reverse_dag_dfs(uint8_t *const *adj_matrix, uint8_t *visited,
  * @param i Target index
  * @return New heap allocated matrix of some m x m size
  */
-static struct graph_of_items *
-get_ancestor_dag(struct graph_of_items *orig_dag, size_t i) {
+static struct graph_of_items *get_ancestor_dag(struct graph_of_items *orig_dag,
+                                               size_t i) {
     /* Implements a BFS on a directed adjacency matrix */
     const size_t n = orig_dag->count;
     item **items = orig_dag->item_list;
@@ -328,12 +322,13 @@ get_ancestor_dag(struct graph_of_items *orig_dag, size_t i) {
     orig_dag = NULL;
 
     uint8_t *items_to_keep = malloc(n);
-    if (!items_to_keep) return NULL;
+    if (!items_to_keep)
+        return NULL;
     memset(items_to_keep, 0, n);
     items_to_keep[i] = 1;
 
     size_t new_size = reverse_dag_dfs(adj_matrix, items_to_keep, i, n);
-    item** new_items = item_array_init_empty(new_size);
+    item **new_items = item_array_init_empty(new_size);
     uint8_t **new_adj_mat = init_matrix(new_size);
 
     /* Now 'export' those items to a new, smaller, graph while removing */
@@ -388,7 +383,6 @@ graph_get_subgraph_to_item(struct graph_of_items **super_graph,
     free(*super_graph); /* Free and nullify the original graph */
     *super_graph = NULL;
     return g;
-
 }
 
 void graph_print_dag_with_item_fields(const struct graph_of_items *dag,

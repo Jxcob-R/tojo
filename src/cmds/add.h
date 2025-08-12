@@ -1,8 +1,8 @@
 #ifndef ADD_H
 #define ADD_H
 
-#include <getopt.h>
 #include <ctype.h>
+#include <getopt.h>
 
 #include "ds/item.h"
 
@@ -38,6 +38,6 @@ extern void add_item_name(const char *name);
  * @param proj_path
  * @return return code
  */
-extern int add_cmd(const int argc, char * const argv[], const char *proj_path);
+extern int add_cmd(const int argc, char *const argv[], const char *proj_path);
 
 #endif
