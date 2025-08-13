@@ -2,6 +2,7 @@
 #include "dev-utils/debug-out.h"
 #include "ds/item.h"
 #include "item.h"
+#include <stdint.h>
 
 /**
  * @brief Free simple edge dependency
@@ -400,21 +401,42 @@ int graph_has_edge(const struct graph_of_items *dag, sitem_id from,
                     to_index);
 }
 
-/*
- * @brief Print vertical graph, this is a very simple implementation
- * @see graph_print_dag_with_item_field
+/**
+ * @brief Print columns of item graph
+ * @param columns Number of columns to print
+ * @see print_recursive_graph
  */
-static void print_vertical_graph(const struct graph_of_items *dag,
-                                 sitem_id target, uint64_t print_flags) {
-    uint16_t items_printed = 0;
+static void print_graph_columns(uint32_t columns) {
+    for (uint32_t i = 0; i < columns; i++) {
+        printf("| ");
+    }
+}
+
+/**
+ * @brief Recursive function for printing dependency graph for an item
+ * @see print_vertical_graph
+ * @return The number of items printed in the entire graph
+ */
+static uint32_t print_recursive_graph(const struct graph_of_items *dag,
+                                      sitem_id target, uint64_t print_flags,
+                                      uint32_t column) {
+    uint32_t items_printed = 0;
+
     for (size_t i = 0; i < dag->count; i++) {
         sitem_id i_id = dag->item_list[i]->item_id;
         if (graph_has_edge(dag, i_id, target)) {
+            items_printed += print_recursive_graph(
+                dag, i_id, print_flags, column + (items_printed != 0));
+            /* Columns respected for each new row */
+            print_graph_columns(column);
+
             if (items_printed >= 1) {
                 printf("| * ");
                 item_print_fancy(dag->item_list[i],
                                  print_flags | ITEM_PRINT_NO_NEWLINE, NULL);
-                printf("\n|/\n");
+                printf("\n");
+                print_graph_columns(column);
+                printf("|/\n");
             } else {
                 printf("* ");
                 item_print_fancy(dag->item_list[i],
@@ -424,6 +446,29 @@ static void print_vertical_graph(const struct graph_of_items *dag,
             items_printed++;
         }
     }
+    return items_printed;
+}
+
+/*
+ * @brief Print vertical graph, this is a very simple implementation
+ * @see graph_print_dag_with_item_field
+ */
+static void print_vertical_graph(const struct graph_of_items *dag,
+                                 sitem_id target, uint64_t print_flags) {
+    uint32_t items_printed = print_recursive_graph(dag, target, print_flags, 0);
+#ifdef DEBUG
+    /* We want to avoid an assertion here for development purposes */
+    if (items_printed != dag->count) {
+        printf("printed: %u, count: %lu\n", items_printed, dag->count);
+        log_err("Items printed incorrectly counts the entire graph");
+    }
+#endif
+
+    /* Print last item */
+    printf("* ");
+    item *target_item = dag->item_list[item_array_find(
+        (const item *const *)dag->item_list, target)];
+    item_print_fancy(target_item, print_flags, NULL);
 }
 
 void graph_print_dag_with_item_fields(const struct graph_of_items *dag,
