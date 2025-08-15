@@ -12,27 +12,29 @@ static const struct option list_long_options[] = {
     {"all", no_argument, 0, 'a'},                /* List all task items */
     {"status", required_argument, 0, 's'},       /* List all task items */
     {"dependencies", required_argument, 0, 'd'}, /* List item dependencies */
+    {"dependencies-code", required_argument, 0,
+     'c'}, /* List dependencies with code */
     {0, 0, 0, 0}};
 
-static const char *list_short_options = "+has:d:";
+static const char *list_short_options = "+has:d:c:";
 
-static const struct opt_fn list_option_fns[] = {{'h', list_help, NULL},
-                                                {'a', list_all_names, NULL},
-                                                {'s', NULL, list_by_status},
-                                                {'d', NULL, list_dependencies},
-                                                {0, 0, 0}};
+static const struct opt_fn list_option_fns[] = {
+    {'h', list_help, NULL},
+    {'a', list_all_names, NULL},
+    {'s', NULL, list_by_status},
+    {'d', NULL, list_dependencies},
+    {'c', NULL, list_dependencies_code},
+    {0, 0, 0}};
 
 int *list_item_code_prefixes(item *const *items) {
     /* Yes, I've assigned a macro to a variable, its because I'm paranoid */
     const unsigned int code_len = ITEM_CODE_LEN;
-    unsigned int num_items;
-    for (num_items = 0; items[num_items]; num_items++)
-        ;
+    size_t num_items = item_count_items(items);
 
     /* Make char list from item codes */
     const char **codes = (const char **)malloc(sizeof(char *) * num_items);
 
-    for (unsigned int i = 0; i < num_items; i++)
+    for (size_t i = 0; i < num_items; i++)
         /* Create shallow copy in codes array */
         codes[i] = items[i]->item_code;
 
@@ -52,6 +54,10 @@ void list_help() {
     printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, LIST_CMD_NAME);
     printf("\n");
     printf("\t-a, --all\tList all current tasks in project\n");
+    printf("\t-d, --dependencies\tList all dependencies associated with the "
+           "given ID\n");
+    printf("\t-c, --dependencies-code\tList all dependencies associated with "
+           "the given code\n");
     printf("\t-h, --help\tBring up this help page\n");
 }
 
@@ -185,8 +191,11 @@ void list_by_status(const char *status_str) {
     }
 }
 
-void list_dependencies(const char *id_str) {
-    sitem_id id = strtoll(id_str, NULL, 10);
+/**
+ * @brief Print the dependency graph of the item with the specified ID
+ * @param id ID of item to print
+ */
+static void print_dependencies_of_id(sitem_id id, uint64_t item_print_flags) {
     if (!dir_contains_item_with_id(id)) {
         printf("Project does not contain item %d\n", id);
         return;
@@ -202,10 +211,34 @@ void list_dependencies(const char *id_str) {
         graph_get_subgraph_to_item(&full_proj_dag, id);
 
     /* No item codes listed */
-    graph_print_dag_with_item_fields(target_dag, id,
-                                     ITEM_PRINT_ID | ITEM_PRINT_NAME);
+    graph_print_dag_with_item_fields(target_dag, id, item_print_flags);
 
     graph_free_graph(&target_dag);
+}
+
+void list_dependencies(const char *id_str) {
+    sitem_id id = strtoll(id_str, NULL, 10);
+    print_dependencies_of_id(id, ITEM_PRINT_ID | ITEM_PRINT_NAME);
+}
+
+void list_dependencies_code(const char *code_str) {
+    sitem_id id = -1;
+    if (strlen(code_str) == ITEM_CODE_LEN) {
+        /* Code string is the full length code */
+        item *itp = dir_get_item_with_code(code_str);
+        if (!itp) {
+            return;
+        }
+        id = itp->item_id;
+        item_free(itp);
+    } else if (strlen(code_str) < ITEM_CODE_LEN) {
+        /* Prefix */
+        id = dir_get_id_from_prefix(code_str);
+    } else {
+        printf("Code provided is of an incorrect length");
+        return;
+    }
+    print_dependencies_of_id(id, ITEM_PRINT_ID | ITEM_PRINT_NAME);
 }
 
 int list_cmd(const int argc, char *const argv[], const char *proj_path) {

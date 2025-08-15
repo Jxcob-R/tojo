@@ -47,8 +47,8 @@ extern void list_all_names(void);
 /**
  * @brief List items of a given status
  * @param status Status of items to list, this is taken to represent a series of
- * one or more of the characters 't', 'i', 'd'; mneumonics for "todo",
- * "in-progress" and "done" respectively.
+ * one or more of the characters 't', 'i', 'd', 'b'; mneumonics for "todo",
+ * "in-progress", "done" and "backlog" respectively.
  */
 extern void list_by_status(const char *status);
 
@@ -57,6 +57,13 @@ extern void list_by_status(const char *status);
  * @param id_str Base 10 representation of the item ID
  */
 extern void list_dependencies(const char *id_str);
+
+/**
+ * @brief List the dependencies associated with the item with the given item
+ * code
+ * @param code_str Code string
+ */
+extern void list_dependencies_code(const char *code_str);
 
 /**
  * @brief Entry point for list command

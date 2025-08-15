@@ -195,6 +195,7 @@ extern void dir_write_item_codes(item *const *items, const int *prefix_lengths);
  * NULL
  * @note Not suitable for full (ITEM_CODE_LEN) codes, only listed *prefixes*
  * (which may technically be ITEM_CODE_LEN characters long)
+ * @see dir_get_item_with_code
  * @see dir_write_item_codes
  */
 extern sitem_id dir_get_id_from_prefix(const char *code_prefix);

@@ -2,7 +2,6 @@
 #include "dev-utils/debug-out.h"
 #include "ds/item.h"
 #include "item.h"
-#include <stdint.h>
 
 /**
  * @brief Free simple edge dependency
@@ -432,6 +431,8 @@ static uint32_t print_recursive_graph(const struct graph_of_items *dag,
 
             if (items_printed >= 1) {
                 printf("| * ");
+                /* NOTE: No arg is provided, this require some future refactor
+                   to support more 'contextual' dependency graph output */
                 item_print_fancy(dag->item_list[i],
                                  print_flags | ITEM_PRINT_NO_NEWLINE, NULL);
                 printf("\n");
@@ -458,8 +459,8 @@ static void print_vertical_graph(const struct graph_of_items *dag,
     uint32_t items_printed = print_recursive_graph(dag, target, print_flags, 0);
 #ifdef DEBUG
     /* We want to avoid an assertion here for development purposes */
-    if (items_printed != dag->count) {
-        printf("printed: %u, count: %lu\n", items_printed, dag->count);
+    if (items_printed != dag->count - 1) {
+        printf("printed: %u, count: %lu\n", items_printed, dag->count - 1);
         log_err("Items printed incorrectly counts the entire graph");
     }
 #endif
