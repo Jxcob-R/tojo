@@ -65,6 +65,7 @@ void tj_help() {
     printf("\tres\tResolve open items\n");
     printf("\twork\tMark items as in-progress\n");
     printf("\tlist\tList items in project\n");
+    printf("\tdep\tAdd some dependencies between items of given IDs\n");
     printf("\n");
     printf("See more details of each command in individual help pages\n");
 }
