@@ -1,5 +1,17 @@
 # CHANGELOG
 
+# 0.6
+
+- cmds: add depend command, adding item dependencies to projects ([400e4a4](https://github.com/Jxcob-R/tojo/commit/400e4a4))
+- feat(graph): convert list of item dependencies to graph (DAG) ([09756aa](https://github.com/Jxcob-R/tojo/commit/09756aa))
+- (tag: tojo-0.6rc1, origin/feat/item-dependency-graph, feat/item-dependency-graph) feat: print relevant dependencies of item given by the ID. ([c533074](https://github.com/Jxcob-R/tojo/commit/c533074))
+- chore: clean up unnecessary code comments and outdated suggestions. ([2613c98](https://github.com/Jxcob-R/tojo/commit/2613c98))
+- refactor: Use better LLVM code formatting for better consistency ([5c60b4c](https://github.com/Jxcob-R/tojo/commit/5c60b4c))
+- feat: simple dependency tree printing with graph of dependencies ([9e240ed](https://github.com/Jxcob-R/tojo/commit/9e240ed))
+- feat: printing item dependency graphs with list option ([e3f3ab9](https://github.com/Jxcob-R/tojo/commit/e3f3ab9))
+- feat(cmds): Item dependency listings can now be specified with item code ([4125b77](https://github.com/Jxcob-R/tojo/commit/4125b77))
+- fix: commands accepting codes now recognise all 7-characters of code ([5297a6f](https://github.com/Jxcob-R/tojo/commit/5297a6f))
+
 # 0.5
 
 - fix: add missing new line to main help ([d0db1a3](https://github.com/Jxcob-R/tojo/commit/d0db1a3))
