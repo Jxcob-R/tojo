@@ -141,10 +141,11 @@ void item_set_name_deep(item *itp, const char *name, const size_t len) {
                           /* see item_set_name */
     assert(len <= ITEM_NAME_MAX);
 
-    char *new_name = malloc((strlen(name) + 1) * sizeof(char));
+    char *new_name = malloc((len + 1) * sizeof(char));
     if (!new_name)
         return;
-    strcpy(new_name, name);
+    strncpy(new_name, name, len);
+    new_name[len] = '\0';
     char *new_start = trim_name_whitespace(new_name);
 
     if (new_start - new_name > 0) {

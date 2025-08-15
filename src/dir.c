@@ -420,9 +420,9 @@ item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
 
     int name_len = ITEM_NAME_MAX;
 
-    /* Find true length of name */
+    /* Find true length of name, without filling spaces */
     for (int i = ITEM_NAME_MAX - 1; i > 0; i--) {
-        if (name[i] != ' ') { /* Filler character is ' ', may be modified */
+        if (name[i] != ' ') { /* Filler character is ' ' will not be modified */
             name_len = i + 2;
             break;
         }
@@ -541,8 +541,9 @@ static off_t fd_find_entry_with_data(int fd, size_t entry_len,
         entry_found = 1;
         pread(fd, curr_entry, sizeof(curr_entry) - 1, i * entry_len);
         /* Compare field data until next delimiter */
-        char *delim_pos = strstr(curr_entry, delim);
-        entry_found = strncmp(curr_entry, data, (delim_pos - curr_entry)) == 0;
+        char *start_cmp = curr_entry + pos_in_entry;
+        char *end_cmp = strstr(start_cmp, delim);
+        entry_found = strncmp(start_cmp, data, (end_cmp - start_cmp)) == 0;
         if (entry_found) { /* Matched field data */
             return i * entry_len;
         }
@@ -832,12 +833,13 @@ static off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
 
 /**
  * @brief Find item with matching field data in project
- * @param pos Position in entry expected
+ * @param pos_in_entry Position in entry expected
  * @param data Raw data expected in entry
  * @return Pointer to heap allocated item with corresponding data
  * @return NULL if item cannot be found
  */
-static item *find_item_matching_field(const off_t pos, const char *data) {
+static item *find_item_matching_field(const off_t pos_in_entry,
+                                      const char *data) {
     int item_fds[_DIR_ITEM_NUM_FILES];
 
     item *itp = NULL;
@@ -852,10 +854,10 @@ static item *find_item_matching_field(const off_t pos, const char *data) {
             return itp;
         }
 
-        off_t item_offset =
-            fd_find_entry_with_data(item_fds[i], DIR_ITEM_ENTRY_LEN, pos,
-                                    /* Will not work with *last* field */
-                                    _DIR_ITEM_FIELD_DELIM, data);
+        off_t item_offset = fd_find_entry_with_data(
+            item_fds[i], DIR_ITEM_ENTRY_LEN, pos_in_entry,
+            /* Will not work with *last* field */
+            data, _DIR_ITEM_FIELD_DELIM);
         if (item_offset >= 0) {
             char correct_entry[DIR_ITEM_ENTRY_LEN + 1];
             if (pread(item_fds[i], correct_entry, DIR_ITEM_ENTRY_LEN,

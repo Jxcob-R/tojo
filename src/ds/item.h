@@ -137,6 +137,10 @@ extern void item_set_name(item *itp, char *name);
 
 /**
  * @brief Set the name of the item by copying data to heap-memory
+ * @param itp Pointer to item struct to copy name to
+ * @param name A string buffer containing the name to copy (may not be
+ * null-terminated)
+ * @param len Length of name buffer to copy from
  * @see item_set_name for a simple use of the name reference
  * @note Will insert null byte if the string name of size len characters is
  * not already null terminated (that is if name[len - 1] != '\0')
