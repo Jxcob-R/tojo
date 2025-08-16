@@ -1,5 +1,5 @@
-#ifndef DEBUG_OUT_C
-#define DEBUG_OUT_C
+#ifndef DEBUG_OUT_H
+#define DEBUG_OUT_H
 
 #include <stdio.h>
 #include <string.h>

@@ -1,13 +1,15 @@
 #include "graph.h"
-#include "dev-utils/debug-out.h"
-#include "ds/item.h"
+#include "dev-utils/test-helpers.h"
 #include "item.h"
+#ifdef DEBUG
+#include "dev-utils/debug-out.h"
+#endif
 
 /**
  * @brief Free simple edge dependency
  * @param dep Dependency to free
  */
-static void free_dependency(struct dependency *dep) { free(dep); }
+static_fn void free_dependency(struct dependency *dep) { free(dep); }
 
 /**
  * @brief Return new dependency on the heap; helper for
@@ -18,7 +20,7 @@ static void free_dependency(struct dependency *dep) { free(dep); }
  * @return Pointer to newly allocated dependency
  * @return NULL if malloc fails
  */
-static struct dependency *new_dependency(const sitem_id from, const sitem_id to,
+static_fn struct dependency *new_dependency(const sitem_id from, const sitem_id to,
                                          const int is_ghost) {
     struct dependency *d = malloc(sizeof(struct dependency));
     d->from = from;
@@ -31,7 +33,7 @@ static struct dependency *new_dependency(const sitem_id from, const sitem_id to,
  * @brief Double the size of the list
  * @param list Dependency list to grow in memory
  */
-static void grow_list(struct dependency_list *list) {
+static_fn void grow_list(struct dependency_list *list) {
     void *ptr = NULL;
     if (list->capacity == 0)
         list->capacity = GRAPH_INIT_CAPACITY;
@@ -49,7 +51,7 @@ static void grow_list(struct dependency_list *list) {
  * @return 1 if capacity is reached
  * @return 0 if not
  */
-static int list_at_capacity(const struct dependency_list *const list) {
+static_fn int list_at_capacity(const struct dependency_list *const list) {
     return list->capacity == list->count;
 }
 
@@ -61,14 +63,14 @@ static int list_at_capacity(const struct dependency_list *const list) {
  * @return 1 if true
  * @return 0 if not edge exists
  */
-static int has_edge(const uint8_t *const *adj_mat, size_t from, size_t to) {
+static_fn int has_edge(const uint8_t *const *adj_mat, size_t from, size_t to) {
     return adj_mat[from][to] != 0;
 }
 
 /**
  * @brief Initialise an n x n matrix
  */
-static uint8_t **init_matrix(size_t n) {
+static_fn uint8_t **init_matrix(size_t n) {
 
     /* Allocated matrix */
     uint8_t **adj_matrix = malloc(sizeof(uint8_t *) * n);
@@ -91,7 +93,7 @@ static uint8_t **init_matrix(size_t n) {
  * @brief Free adjacency matrix
  * @param mat Matrix on heap to free, set to
  */
-static void free_matrix(uint8_t ***mat, size_t n) {
+static_fn void free_matrix(uint8_t ***mat, size_t n) {
     for (size_t i = 0; i < n; i++) {
         free((*mat)[i]);
     }
@@ -116,7 +118,7 @@ struct graph_of_items *init_graph() {
  * @param graph Graph to populate
  * @param list List of dependencies from which to generate the adjacency matrix
  */
-static void create_matrix(struct graph_of_items *graph,
+static_fn void create_matrix(struct graph_of_items *graph,
                           const struct dependency_list *list) {
     assert(graph->item_list);
     assert(graph->count > 0);
@@ -146,7 +148,7 @@ static void create_matrix(struct graph_of_items *graph,
 /**
  * @brief Check if two given dependency structs have equal content
  */
-static int dependencies_are_equal(const struct dependency *first,
+static_fn int dependencies_are_equal(const struct dependency *first,
                                   const struct dependency *second) {
     return first->from == second->from && first->to == second->to &&
            first->is_ghost == second->is_ghost;
@@ -293,7 +295,7 @@ struct graph_of_items *graph_create_graph(item ***items,
  * @important Items indices that are kept are marked as non-zero
  * @return The number of nodes found.
  */
-static size_t reverse_dag_dfs(uint8_t *const *adj_matrix, uint8_t *visited,
+static_fn size_t reverse_dag_dfs(uint8_t *const *adj_matrix, uint8_t *visited,
                               size_t start, size_t n) {
     assert(start <= n);
 
@@ -319,7 +321,7 @@ static size_t reverse_dag_dfs(uint8_t *const *adj_matrix, uint8_t *visited,
  * @param i Target index
  * @return New heap allocated matrix of some m x m size
  */
-static struct graph_of_items *get_ancestor_dag(struct graph_of_items *orig_dag,
+static_fn struct graph_of_items *get_ancestor_dag(struct graph_of_items *orig_dag,
                                                size_t i) {
     /* Implements a BFS on a directed adjacency matrix */
     const size_t n = orig_dag->count;
@@ -405,7 +407,7 @@ int graph_has_edge(const struct graph_of_items *dag, sitem_id from,
  * @param columns Number of columns to print
  * @see print_recursive_graph
  */
-static void print_graph_columns(uint32_t columns) {
+static_fn void print_graph_columns(uint32_t columns) {
     for (uint32_t i = 0; i < columns; i++) {
         printf("| ");
     }
@@ -416,7 +418,7 @@ static void print_graph_columns(uint32_t columns) {
  * @see print_vertical_graph
  * @return The number of items printed in the entire graph
  */
-static uint32_t print_recursive_graph(const struct graph_of_items *dag,
+static_fn uint32_t print_recursive_graph(const struct graph_of_items *dag,
                                       sitem_id target, uint64_t print_flags,
                                       uint32_t column) {
     uint32_t items_printed = 0;
@@ -454,7 +456,7 @@ static uint32_t print_recursive_graph(const struct graph_of_items *dag,
  * @brief Print vertical graph, this is a very simple implementation
  * @see graph_print_dag_with_item_field
  */
-static void print_vertical_graph(const struct graph_of_items *dag,
+static_fn void print_vertical_graph(const struct graph_of_items *dag,
                                  sitem_id target, uint64_t print_flags) {
     uint32_t items_printed = print_recursive_graph(dag, target, print_flags, 0);
 #ifdef DEBUG

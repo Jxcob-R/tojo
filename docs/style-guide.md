@@ -11,6 +11,7 @@ it is expected that changes pushed to main follow this guide.
     - [Function names](#function-names)
     - [Type names](#type-names)
     - [Asserting invariants](#asserting-invariants)
+    - [Other Styling](#other-styling)
 - [Documentation](#documentation)
     - [Doc-comments](#doc-comments)
     - [Markdown](#markdown)
@@ -45,11 +46,29 @@ stuff).
 Use C-native `assert()` to ensure invariant conditions are met at the start of
 functions; do not leave the success of a function call to chance.
 
-### LLVM Style
+### Other Styling
 
 In general, the default code/formatting style uses:
 - Relevant styling from [LLVM Coding Standards](https://llvm.org/docs/CodingStandards.html)
 - 4 space tab indentation
+
+For the purpose of making effective bottom-up unit tests, `static` helper
+functions should be declared with the `static_fn` macro instead, e.g.
+
+```c
+static_fn int foo(int a, int b) {
+    /// some stuff
+}
+```
+
+Unless in the case that these functions are not even worthwhile having unit
+tests for, for example, a one line `inline` function may simply be `static`.
+
+This macro's definition becomes empty for unit testing builds, making it
+possible to test these helper function in unit testing files.
+
+Note that conditional declaration should also be made in associated header
+files if the `TJUNITTEST` macro is set at compile time.
 
 ## Documentation
 
@@ -87,12 +106,13 @@ characters and lines in the body up to 72 characters.
 
 We use a slightly constrained set of commit types:
 
-- `bugfix`
+- `fix`
 - `ci`
 - `compat`
 - `docs`
 - `feat`
 - `memfix`
+- `test`
 - `refactor`
 
 Changes should be small enough to be captured by a single type.

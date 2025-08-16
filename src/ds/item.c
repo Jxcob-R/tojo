@@ -1,5 +1,8 @@
 #include "item.h"
+#include "dev-utils/test-helpers.h"
+#ifdef DEBUG
 #include "dev-utils/debug-out.h"
+#endif
 
 /**
  * @brief Characters from which an item's code can be generated
@@ -114,7 +117,7 @@ void item_set_name(item *itp, char *name) {
  * @param name String to trim
  * @return Start of string -- new
  */
-static char *trim_name_whitespace(char *name) {
+static_fn char *trim_name_whitespace(char *name) {
     /* Trim leading whitespace */
     while (isspace(*name))
         name++;

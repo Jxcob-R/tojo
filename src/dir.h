@@ -28,6 +28,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "ds/graph.h"
 #include "ds/item.h"
 
@@ -233,4 +234,41 @@ extern void dir_add_dependency(const struct dependency *const dep);
  * @return -2 if some other error occurs
  */
 extern int dir_rm_dependency(const struct dependency *const dep);
+
+#ifdef TJUNITTEST
+extern void setup_path_names(const char *const path);
+extern int create_file(const char *const fname);
+extern int create_items(void);
+extern void open_items(const int flags, int item_fds[_DIR_ITEM_NUM_FILES]);
+extern void close_items(const int item_fds[_DIR_ITEM_NUM_FILES]);
+extern int open_items_status(enum status st, int flags);
+extern char *get_home_directory(void);
+extern int is_accessible_directory(const char *path);
+extern int move_up_directory(char *path);
+extern void build_relative_path(char *dest, int levels_up,
+                                const char *target_dir);
+extern int find_target_directory(const char *start_path, const char *home_dir,
+                                 const char *target_dir, int *levels_up);
+extern item *fd_read_item_at(int fd, off_t entry_off);
+extern int fd_total_items(const int fd, int entry_len);
+extern off_t fd_find_entry_with_data(int fd, size_t entry_len,
+                                     off_t pos_in_entry, const char *data,
+                                     const char *delim);
+extern sitem_id increment_next_id(int fd_next_id);
+extern void make_item_entry(const item *const itp,
+                            char buf[DIR_ITEM_ENTRY_LEN + 1]);
+extern off_t fd_search_for_entry_id(const int fd, const sitem_id target_id);
+extern item *find_item_matching_field(const off_t pos_in_entry,
+                                      const char *data);
+extern int fd_swap_item_entries_at(const int fd, const off_t off_a,
+                                   const off_t off_b);
+extern int append_item_entry(const item *itp,
+                             const char entry[DIR_ITEM_ENTRY_LEN + 1]);
+extern int fd_remove_entry_at(const int fd, const off_t entry_off,
+                              int entry_len);
+extern int code_prefix_matches(const char *prefix, const char *expected);
+extern void read_dependency(struct dependency *dep, const char *buf);
+extern void dependency_to_entry(const struct dependency *const dep, char *buf);
+#endif
+
 #endif

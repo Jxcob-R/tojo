@@ -192,4 +192,8 @@ extern int item_is_valid_code(const char *code);
  */
 extern void item_print_fancy(const item *itp, uint64_t print_flags, void *arg);
 
+#ifdef TJUNITTEST
+char *trim_name_whitespace(char *name);
+#endif
+
 #endif

@@ -1,8 +1,7 @@
 #include "dir.h"
-#include "config.h"
+#include "dev-utils/test-helpers.h"
 #include "ds/graph.h"
 #include "ds/item.h"
-
 #ifdef DEBUG
 #include "dev-utils/debug-out.h"
 #endif
@@ -29,7 +28,7 @@ static char item_dependencies[MAX_PATH] = {'\0'}; /* Item dependencies */
  * @note Modifies global variables, should be used once in a dir API call
  * @note Calling with NULL assumes that project path is already known
  */
-static void setup_path_names(const char *const path) {
+static_fn void setup_path_names(const char *const path) {
     if (!*proj_path && path)
         strcpy(proj_path, path);
 
@@ -68,7 +67,7 @@ static void setup_path_names(const char *const path) {
  * @return 1 in case of EEXIST
  * @return 2 in case of other error
  */
-static int create_file(const char *const fname) {
+static_fn int create_file(const char *const fname) {
     int fd = open(fname, O_CREAT, CONF_DIR_PERMS & 0666);
     if (fd < 0) {
         return 1 + (errno != EEXIST);
@@ -84,7 +83,7 @@ static int create_file(const char *const fname) {
  * @return -1 on error
  * @see open, close, mkdir
  */
-static int create_items() {
+static_fn int create_items() {
     setup_path_names(NULL);
 
     /* Create directory */
@@ -128,7 +127,7 @@ static int create_items() {
  * @see open
  * @see close_items
  */
-static void open_items(const int flags, int item_fds[_DIR_ITEM_NUM_FILES]) {
+static_fn void open_items(const int flags, int item_fds[_DIR_ITEM_NUM_FILES]) {
     assert(strlen(items_path) >=
            sizeof(CONF_PROJ_DIR) + sizeof(_DIR_ITEM_PATH_D) - 1);
 
@@ -155,7 +154,7 @@ static void open_items(const int flags, int item_fds[_DIR_ITEM_NUM_FILES]) {
  * @see open
  * @see open_items
  */
-static void close_items(const int item_fds[_DIR_ITEM_NUM_FILES]) {
+static_fn void close_items(const int item_fds[_DIR_ITEM_NUM_FILES]) {
     if (!item_fds)
         return;
 
@@ -174,7 +173,7 @@ static void close_items(const int item_fds[_DIR_ITEM_NUM_FILES]) {
  * @see open
  * @see open_items in the case *all* project items need to be opened/visible
  */
-static int open_items_status(enum status st, int flags) {
+static_fn int open_items_status(enum status st, int flags) {
     switch (st) {
     case BACKLOG:
         return open(backlog_path, flags);
@@ -196,7 +195,7 @@ static int open_items_status(enum status st, int flags) {
 /*
  * @brief Get the user's home directory
  */
-static char *get_home_directory() {
+static_fn char *get_home_directory() {
     struct passwd *pw = getpwuid(getuid());
     return pw ? pw->pw_dir : NULL;
 }
@@ -204,7 +203,7 @@ static char *get_home_directory() {
 /*
  * @brief Check if a directory exists and is accessible
  */
-static int is_accessible_directory(const char *path) {
+static_fn int is_accessible_directory(const char *path) {
     if (access(path, F_OK | R_OK | W_OK) != 0) {
         return 0;
     }
@@ -220,7 +219,7 @@ static int is_accessible_directory(const char *path) {
 /*
  * @brief Move up one directory level in the path
  */
-static int move_up_directory(char *path) {
+static_fn int move_up_directory(char *path) {
     char *last_slash = strrchr(path, '/');
 
     if (last_slash == NULL || last_slash == path) {
@@ -237,8 +236,8 @@ static int move_up_directory(char *path) {
  * @param levels_up
  * @param target_dir
  */
-static void build_relative_path(char *dest, int levels_up,
-                                const char *target_dir) {
+static_fn void build_relative_path(char *dest, int levels_up,
+                                   const char *target_dir) {
     dest[0] = '\0';
 
     if (levels_up == 0) {
@@ -259,8 +258,9 @@ static void build_relative_path(char *dest, int levels_up,
  * @brief Search for target directory starting from current path, moving up
  * until home_dir
  */
-static int find_target_directory(const char *start_path, const char *home_dir,
-                                 const char *target_dir, int *levels_up) {
+static_fn int find_target_directory(const char *start_path,
+                                    const char *home_dir,
+                                    const char *target_dir, int *levels_up) {
     char search_path[MAX_PATH];
     char test_path[MAX_PATH + sizeof(CONF_PROJ_DIR)];
 
@@ -441,7 +441,7 @@ item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
  * @return item with data in entries file, heap allocated
  * @note entry_off must be the offset of the *first* byte of the item entry
  */
-static item *fd_read_item_at(int fd, off_t entry_off) {
+static_fn item *fd_read_item_at(int fd, off_t entry_off) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
     assert(entry_off >= 0);
 
@@ -464,7 +464,7 @@ static item *fd_read_item_at(int fd, off_t entry_off) {
  * @return -1 on error
  * @note File contents are not read and thus, no entries can be verified
  */
-static int fd_total_items(const int fd, int entry_len) {
+static_fn int fd_total_items(const int fd, int entry_len) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
 
     /* Use stat */
@@ -522,9 +522,9 @@ int dir_total_items() {
  * @see dir.h For field positions in different entry formats
  * @see fd_search_for_entry_id For more efficient ID-based *item* searching
  */
-static off_t fd_find_entry_with_data(int fd, size_t entry_len,
-                                     off_t pos_in_entry, const char *data,
-                                     const char *delim) {
+static_fn off_t fd_find_entry_with_data(int fd, size_t entry_len,
+                                        off_t pos_in_entry, const char *data,
+                                        const char *delim) {
     assert(fcntl(fd, F_GETFD) != -1);
     const int flags = fcntl(fd, F_GETFL) & O_ACCMODE;
     assert(flags == O_RDWR || flags == O_RDONLY);
@@ -558,7 +558,7 @@ static off_t fd_find_entry_with_data(int fd, size_t entry_len,
  * @return Current ID (the one replaced)
  * @return -1 on error
  */
-static sitem_id increment_next_id(int fd_next_id) {
+static_fn sitem_id increment_next_id(int fd_next_id) {
     assert((fcntl(fd_next_id, F_GETFL) & O_ACCMODE) == O_RDWR);
 
     char curr_id_hex_str[HEX_LEN(sitem_id) + 1];
@@ -712,8 +712,8 @@ item **dir_read_all_items() {
  * @note Resulting data in buf is null-terminated and guaranteed to at the last
  * position
  */
-static void make_item_entry(const item *const itp,
-                            char buf[DIR_ITEM_ENTRY_LEN + 1]) {
+static_fn void make_item_entry(const item *const itp,
+                               char buf[DIR_ITEM_ENTRY_LEN + 1]) {
     /* Field delimiter */
     const char delim[_DIR_ITEM_FIELD_DELIM_LEN + 1] = _DIR_ITEM_FIELD_DELIM;
     /* Item terminator */
@@ -747,8 +747,8 @@ static void make_item_entry(const item *const itp,
  * @return < 0 offset if item is not found - position of where it *should* be
  * @note Does not deal with empty file case
  */
-static off_t _fd_bin_search_entry_id(const int fd, const sitem_id target,
-                                     off_t start, off_t end) {
+static_fn off_t _fd_bin_search_entry_id(const int fd, const sitem_id target,
+                                        off_t start, off_t end) {
     off_t middle = (start + end) / 2 -
                    /* Align to item entry offset */
                    (((start + end) / 2) % DIR_ITEM_ENTRY_LEN);
@@ -806,7 +806,7 @@ static off_t _fd_bin_search_entry_id(const int fd, const sitem_id target,
  * 'would-be' insertion offset of 0; this is always returned for an empty file.
  * @return -1 on error (guaranteed not to align with a valid 'negative offset'
  */
-static off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
+static_fn off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
     /* Conduct binary search on open fd */
     assert(fcntl(fd, F_GETFD) != -1);
     int flags = fcntl(fd, F_GETFL) & O_ACCMODE;
@@ -838,8 +838,8 @@ static off_t fd_search_for_entry_id(const int fd, const sitem_id target_id) {
  * @return Pointer to heap allocated item with corresponding data
  * @return NULL if item cannot be found
  */
-static item *find_item_matching_field(const off_t pos_in_entry,
-                                      const char *data) {
+static_fn item *find_item_matching_field(const off_t pos_in_entry,
+                                         const char *data) {
     int item_fds[_DIR_ITEM_NUM_FILES];
 
     item *itp = NULL;
@@ -883,8 +883,8 @@ static item *find_item_matching_field(const off_t pos_in_entry,
  * @return -1 if offsets are incorrect or in case of some other error
  * @note Handles case where off_a == off_b
  */
-static int fd_swap_item_entries_at(const int fd, const off_t off_a,
-                                   const off_t off_b) {
+static_fn int fd_swap_item_entries_at(const int fd, const off_t off_a,
+                                      const off_t off_b) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
 
     /* Check proper flags */
@@ -940,8 +940,8 @@ static int fd_swap_item_entries_at(const int fd, const off_t off_a,
  * @note No 'correctness' checks occur to validate that the entry indeed
  * represents the item pointed to by itp, this is assumed to be the case
  */
-static int append_item_entry(const item *itp,
-                             const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
+static_fn int append_item_entry(const item *itp,
+                                const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
     int open_flags = O_RDWR;
     int fd = open_items_status(itp->item_st, open_flags);
     if (fd == -1)
@@ -1007,8 +1007,8 @@ int dir_append_item(const item *it) {
  * entry
  * @note Preserve ordering of entries (besides removed one, obviously)
  */
-static int fd_remove_entry_at(const int fd, const off_t entry_off,
-                              int entry_len) {
+static_fn int fd_remove_entry_at(const int fd, const off_t entry_off,
+                                 int entry_len) {
     assert(fcntl(fd, F_GETFD) != -1); /* File descriptor is valid */
     assert(entry_off >= 0);
 
@@ -1140,7 +1140,7 @@ void dir_write_item_codes(item *const *items, const int *prefix_lengths) {
  * @param expected Expected prefix
  * @note Expected prefix (expected) must be null terminated
  */
-static int code_prefix_matches(const char *prefix, const char *expected) {
+static_fn int code_prefix_matches(const char *prefix, const char *expected) {
     assert(prefix);
     assert(expected);
 
@@ -1211,7 +1211,7 @@ item *dir_get_item_with_code(const char *full_code) {
  * @param dep Pointer to dependency struct to write to
  * @param buffer Buffer representing formatted dependency entry
  */
-static void read_dependency(struct dependency *dep, const char *buf) {
+static_fn void read_dependency(struct dependency *dep, const char *buf) {
     assert(buf);
     assert(dep);
 
@@ -1234,7 +1234,8 @@ static void read_dependency(struct dependency *dep, const char *buf) {
  * @param dep Dependency to make entry for
  * @param buf Buffer to write entry to
  */
-static void dependency_to_entry(const struct dependency *const dep, char *buf) {
+static_fn void dependency_to_entry(const struct dependency *const dep,
+                                   char *buf) {
     assert(buf);
     assert(dep);
 

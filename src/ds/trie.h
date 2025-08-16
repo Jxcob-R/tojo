@@ -36,4 +36,14 @@ extern void shortest_unique_prefix_lengths(const char *const *strings,
                                            const int uniq_chars,
                                            int *prefix_lengths);
 
+#ifdef TJUNITTEST
+extern struct prefix_trie_node *init_node(const int num_children);
+extern void free_node(struct prefix_trie_node *node);
+extern void free_trie(struct prefix_trie_node *root);
+extern void add_child(struct prefix_trie_node *parent, const char tok,
+                      unsigned int max);
+extern struct prefix_trie_node *get_child(const struct prefix_trie_node *parent,
+                                          const char tok);
+#endif
+
 #endif

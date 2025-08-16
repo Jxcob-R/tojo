@@ -1,10 +1,14 @@
 #include "trie.h"
+#include "dev-utils/test-helpers.h"
+#ifdef DEBUG
 #include "dev-utils/debug-out.h"
+#endif
 
 /**
  * @brief Make an array of node pointers num long
  * @param num Length of pointer array
  * @return Pointer to head of array
+ * @note Not tested
  */
 static inline struct prefix_trie_node **make_child_ptrs(unsigned int num) {
     return (struct prefix_trie_node **)malloc(
@@ -17,7 +21,7 @@ static inline struct prefix_trie_node **make_child_ptrs(unsigned int num) {
  * @return NULL if allocation fails
  * @see malloc
  */
-static struct prefix_trie_node *init_node(const int num_children) {
+static_fn struct prefix_trie_node *init_node(const int num_children) {
     struct prefix_trie_node *node =
         (struct prefix_trie_node *)malloc(sizeof(struct prefix_trie_node));
 
@@ -53,7 +57,7 @@ static struct prefix_trie_node *init_node(const int num_children) {
  * @note children are 'let' go, this may result in a memory leak if called
  * incorrectly; use carefully!
  */
-static void free_node(struct prefix_trie_node *node) {
+static_fn void free_node(struct prefix_trie_node *node) {
     if (!node)
         return;
 
@@ -65,7 +69,7 @@ static void free_node(struct prefix_trie_node *node) {
  * @brief Free the trie and associated resources
  * @param root Root of the trie
  */
-static void free_trie(struct prefix_trie_node *root) {
+static_fn void free_trie(struct prefix_trie_node *root) {
     if (!root)
         return;
 
@@ -83,7 +87,7 @@ static void free_trie(struct prefix_trie_node *root) {
  * @param tok Token (char) of new child
  * @param max Maximum number of children available in the parent
  */
-static void add_child(struct prefix_trie_node *parent, const char tok,
+static_fn void add_child(struct prefix_trie_node *parent, const char tok,
                       unsigned int max) {
     /* No children initialised for child by default */
     struct prefix_trie_node *child = init_node(0);
@@ -122,7 +126,7 @@ static void add_child(struct prefix_trie_node *parent, const char tok,
  * @return Pointer to child
  * @return NULL if the parent does not have a matching child
  */
-static struct prefix_trie_node *get_child(const struct prefix_trie_node *parent,
+static_fn struct prefix_trie_node *get_child(const struct prefix_trie_node *parent,
                                           const char tok) {
     struct prefix_trie_node *curr_child = NULL;
     unsigned int num_children = parent->initialised_children;
