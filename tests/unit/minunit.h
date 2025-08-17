@@ -72,6 +72,11 @@ extern "C" {
 /*  Accuracy with which floats are compared */
 #define MINUNIT_EPSILON 1E-12
 
+/* Colors for terminal output */
+#define MINUNIT_ANSI_RED "\x1b[31m"
+#define MINUNIT_ANSI_GREEN "\x1b[32m"
+#define MINUNIT_ANSI_RESET "\x1b[0m"
+
 /*  Misc. counters */
 static int minunit_run = 0;
 static int minunit_assert = 0;
@@ -115,8 +120,10 @@ static void (*minunit_teardown)(void) = NULL;
         } if (minunit_setup) (*minunit_setup)();                               \
         minunit_status = 0; test(); minunit_run++; if (minunit_status) {       \
             minunit_fail++;                                                    \
-            printf("F");                                                       \
+            printf(MINUNIT_ANSI_RED "\tF" MINUNIT_ANSI_RESET);                                                       \
             printf("\n%s\n", minunit_last_message);                            \
+        } else {                                                               \
+            printf(MINUNIT_ANSI_GREEN "\tP\n" MINUNIT_ANSI_RESET);               \
         }(void)fflush(stdout);                                                 \
         if (minunit_teardown)(*minunit_teardown)();)
 
