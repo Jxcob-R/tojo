@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 
-# Run make run
+# Clear built files and re-build
+make
 make unittests
 
 # Then build and run the tests

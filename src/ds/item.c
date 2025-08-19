@@ -33,7 +33,7 @@ item **item_array_init(int num_items) {
 item **item_array_init_empty(int num_items) {
     item **items = (item **)malloc(sizeof(item *) * (num_items + 1));
     if (items) {
-        memset(items, 0x0, num_items * sizeof(item *));
+        memset(items, 0x0, (num_items + 1) * sizeof(item *));
     }
     return items;
 }
