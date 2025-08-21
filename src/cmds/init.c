@@ -48,14 +48,14 @@ int init_cmd(const int argc, char *const argv[], const char *proj_path) {
         argc, argv, init_short_options, init_long_options, init_option_fns);
 
     if (opts_handled < 0) {
-        printf("Unknown options provided");
+        printf("Unknown options provided\n");
         return RET_INVALID_OPTS;
     }
 
     /* Check project existence */
     if (strlen(proj_path) >= sizeof(CONF_PROJ_DIR)) {
         /* Project directory exists */
-        printf("Already inside a %s project, with directory located at %s",
+        printf("Already inside a %s project, with directory located at %s\n",
                CONF_CMD_NAME, proj_path);
 #ifdef DEBUG
         log_err("Project directory found");
