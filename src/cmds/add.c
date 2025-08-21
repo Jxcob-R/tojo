@@ -95,7 +95,7 @@ void add_restage_item_code(const char *code) {
 
 void add_item_name(const char *name) {
     assert(name);
-    item_set_name_deep(&it, name, strlen(name) + 1);
+    item_set_name_deep(&it, name, strlen(name));
 
     /* ID set to next available number */
     it.item_id = dir_next_id();

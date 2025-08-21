@@ -120,10 +120,10 @@ static void (*minunit_teardown)(void) = NULL;
         } if (minunit_setup) (*minunit_setup)();                               \
         minunit_status = 0; test(); minunit_run++; if (minunit_status) {       \
             minunit_fail++;                                                    \
-            printf(MINUNIT_ANSI_RED "\tF" MINUNIT_ANSI_RESET);                                                       \
+            printf(MINUNIT_ANSI_RED "\tF" MINUNIT_ANSI_RESET);                 \
             printf("\n%s\n", minunit_last_message);                            \
         } else {                                                               \
-            printf(MINUNIT_ANSI_GREEN "\tP\n" MINUNIT_ANSI_RESET);               \
+            printf(MINUNIT_ANSI_GREEN "\tP\n" MINUNIT_ANSI_RESET);             \
         }(void)fflush(stdout);                                                 \
         if (minunit_teardown)(*minunit_teardown)();)
 
@@ -205,6 +205,23 @@ static void (*minunit_teardown)(void) = NULL;
         } if (!minunit_tmp_r) {                                                \
             minunit_tmp_r = "<null pointer>";                                  \
         } if (strcmp(minunit_tmp_e, minunit_tmp_r) != 0) {                     \
+            (void)snprintf(minunit_last_message, MINUNIT_MESSAGE_LEN,          \
+                           "%s failed:\n\t%s:%d: '%s' expected but was '%s'",  \
+                           __func__, __FILE__, __LINE__, minunit_tmp_e,        \
+                           minunit_tmp_r);                                     \
+            minunit_status = 1;                                                \
+            return;                                                            \
+        } else { printf("."); })
+
+#define mu_assert_string_n_eq(expected, result, n)                             \
+    MU__SAFE_BLOCK(                                                            \
+        const char *minunit_tmp_e = expected;                                  \
+        const char *minunit_tmp_r = result; minunit_assert++;                  \
+        if (!minunit_tmp_e) {                                                  \
+            minunit_tmp_e = "<null pointer>";                                  \
+        } if (!minunit_tmp_r) {                                                \
+            minunit_tmp_r = "<null pointer>";                                  \
+        } if (strncmp(minunit_tmp_e, minunit_tmp_r, (n)) != 0) {               \
             (void)snprintf(minunit_last_message, MINUNIT_MESSAGE_LEN,          \
                            "%s failed:\n\t%s:%d: '%s' expected but was '%s'",  \
                            __func__, __FILE__, __LINE__, minunit_tmp_e,        \

@@ -103,15 +103,16 @@ extern size_t item_count_items(item *const *items);
 
 /**
  * @brief Move a given number of pointers of items from a source to a
- * destination or until source is exhausted
+ * destination or until source is exhausted. This only adds elements to the
+ * *end* of the array, i.e. inserts at the first NULL position
  * @param items_dest Destination of items
  * @param items_src Source of items to copy, should be terminated by a NULL
- * pointer
+ * pointer, this is freed and set to NULL after call
  * @param n At most number of items to copy
  * @note Copying and Adding occurs from the start of both pointers
  * @warning May overflow
  */
-extern void item_array_add(item **items_dest, item *const *items_src,
+extern void item_array_add(item **items_dest, item ***items_src,
                            const size_t n);
 
 /**
@@ -131,9 +132,16 @@ extern void item_array_free(item ***arr, size_t max);
 
 /**
  * @brief Set the name of an item using a reference to the string provided.
- * @see item_set_name_deep for a heap deep-copy version
+ * @param itp Item to set name of
+ * @param name Pointer to heap-allocated space where the new name is taken, this
+ * argument is then set to NULL after calling
+ * @note If the item pointed to by pointer itp is not NULL when this function is
+ * called (which is the typical behaviour when allocating items with item_init),
+ * then the old name is freed.
+ * @see item_set_name_deep for a heap deep-copy version, which is generally
+ * recommended for memory safety
  */
-extern void item_set_name(item *itp, char *name);
+extern void item_set_name(item *itp, char **name);
 
 /**
  * @brief Set the name of the item by copying data to heap-memory
@@ -145,7 +153,7 @@ extern void item_set_name(item *itp, char *name);
  * @note Will insert null byte if the string name of size len characters is
  * not already null terminated (that is if name[len - 1] != '\0')
  */
-extern void item_set_name_deep(item *itp, const char *name, const size_t len);
+extern void item_set_name_deep(item *itp, const char *name, size_t len);
 
 /**
  * @brief Sets a unique ITEM_CODE_LEN-lengthed code for an item. This is unique

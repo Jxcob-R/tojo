@@ -423,7 +423,7 @@ item *entry_to_item(const char entry[DIR_ITEM_ENTRY_LEN + 1]) {
     /* Find true length of name, without filling spaces */
     for (int i = ITEM_NAME_MAX - 1; i > 0; i--) {
         if (name[i] != ' ') { /* Filler character is ' ' will not be modified */
-            name_len = i + 2;
+            name_len = i + 1;
             break;
         }
     }

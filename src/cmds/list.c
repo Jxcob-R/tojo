@@ -174,13 +174,12 @@ void list_by_status(const char *status_str) {
                 list_items = item_array_resize(list_items, list_capacity);
             }
 
-            if (!list_items)
+            if (!list_items) {
                 return;
+            }
 
-            item_array_add(list_items + num_items, status_items, SIZE_MAX);
+            item_array_add(list_items, &status_items, SIZE_MAX);
             num_items += new_num_items;
-
-            free(status_items);
         }
     }
 

@@ -75,16 +75,22 @@ size_t item_count_items(item *const *items) {
     return count;
 }
 
-void item_array_add(item **items_dest, item *const *items_src, const size_t n) {
+void item_array_add(item **items_dest, item ***items_src, const size_t n) {
     assert(items_dest);
 
-    if (!items_src)
+    if (!*items_src)
         return;
 
-    /* Copy *at most* n items */
-    for (size_t i = 0; i < n && items_src[i]; i++) {
-        memcpy(items_dest + i, items_src + i, sizeof(item *));
+    while (*items_dest) {
+        items_dest++;
     }
+
+    /* Copy *at most* n items */
+    for (size_t i = 0; i < n && (*items_src)[i]; i++) {
+        memcpy(items_dest + i, (*items_src) + i, sizeof(item *));
+    }
+    free(*items_src);
+    *items_src = NULL;
 }
 
 void item_free(item *itp) {
@@ -107,9 +113,13 @@ void item_array_free(item ***arr, size_t max) {
     *arr = NULL;
 }
 
-void item_set_name(item *itp, char *name) {
+void item_set_name(item *itp, char **name) {
     assert(itp != NULL);
-    itp->item_name = name;
+    if (itp->item_name != NULL) {
+        free(itp->item_name);
+    }
+    itp->item_name = *name;
+    *name = NULL;
 }
 
 /**
@@ -138,11 +148,12 @@ static_fn char *trim_name_whitespace(char *name) {
     return name;
 }
 
-void item_set_name_deep(item *itp, const char *name, const size_t len) {
+void item_set_name_deep(item *itp, const char *name, size_t len) {
     assert(itp->item_name != NULL);
     assert(name != NULL); /* Represents an incorrect call */
                           /* see item_set_name */
     assert(len <= ITEM_NAME_MAX);
+    len++; /* This is very lazy */
 
     char *new_name = malloc((len + 1) * sizeof(char));
     if (!new_name)
