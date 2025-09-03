@@ -203,6 +203,16 @@ extern void dir_write_item_codes(item *const *items, const int *prefix_lengths);
 extern sitem_id dir_get_id_from_prefix(const char *code_prefix);
 
 /**
+ * @brief Return the ID of the item associated with the full code provided
+ * @param full_code Full item code (of appropriate length)
+ * @see dir_get_item_with_code for null-termination requirement
+ * @return ID of associated item
+ * @return -1 if no items have been listed in this project or code_prefix is
+ * NULL
+ */
+extern sitem_id dir_get_id_from_full_code(const char *full_code);
+
+/**
  * @brief Retrieve the item in the project with the given code
  * @param full_code Full ITEM_CODE_LEN code (may or may not be null terminated).
  * @return Heap-allocated pointer to item with associated code

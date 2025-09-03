@@ -1192,6 +1192,16 @@ sitem_id dir_get_id_from_prefix(const char *code_prefix) {
     return found_id;
 }
 
+sitem_id dir_get_id_from_full_code(const char *full_code) {
+    item *item = dir_get_item_with_code(full_code);
+    if (!item) {
+        return -1;
+    }
+    sitem_id id = item->item_id;
+    item_free(item);
+    return id;
+}
+
 item *dir_get_item_with_code(const char *full_code) {
     assert(full_code);
 
