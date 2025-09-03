@@ -11,14 +11,14 @@
 
 /* Option names */
 static const struct option dep_long_options[] = {
-    {"help", no_argument, 0, 'h'}, /* Help option */
-    {"add", required_argument, 0, 'a'},
+    {"help", no_argument, 0, 'h'},      /* Help option */
+    {"add", required_argument, 0, 'a'}, /* Dependency addition by IDs */
     {0, 0, 0, 0}};
 
 static const char *dep_short_options = "+ha:";
 
 static const struct opt_fn dep_option_fns[] = {
-    {'h', dep_help, NULL}, {'a', NULL, dep_add_ids}, {0, 0, 0}};
+    {'h', dep_help, NULL}, {'a', NULL, dep_add}, {0, 0, 0}};
 
 void dep_help(void) {
     printf("%s %s - add a dependency between items\n", CONF_NAME_UPPER,
@@ -26,8 +26,87 @@ void dep_help(void) {
     printf("usage: %s %s [<options>]\n", CONF_CMD_NAME, DEP_CMD_NAME);
     printf("\n");
     printf("\t-h, --help\tBring up this help page\n");
-    printf("\t-a, --add\tAdd a dependency between two tasks in the project\n");
+    printf("\t-a, --add\tAdd a a dependency/dependencies to a task in the "
+           "project\n");
     printf("\n");
+}
+
+static struct dependency_list *
+_parse_ids_from_user(const char *dep_str,
+                     struct dependency_list **project_dependencies) {
+    /* Parse dependency string */
+    (void)strtok((char *)dep_str, DEP_DELIM);
+    sitem_id from = strtol(dep_str, NULL, 10);
+
+    if (!dir_contains_item_with_id(from)) {
+        printf("No item in project with ID %d\n", from);
+        if (*project_dependencies) {
+            graph_free_dependency_list(project_dependencies);
+        }
+        return NULL;
+    }
+
+    struct dependency_list *list = graph_init_dependency_list(0);
+
+    char *to_str = strtok(NULL, DEP_SIBLING_DELIM);
+    while (to_str) {
+        sitem_id to = strtol(to_str, NULL, 10);
+        if (!dir_contains_item_with_id(to)) {
+            printf("No item in project with ID %d\n", to);
+            /* Continue anyway */
+            continue;
+        }
+        struct dependency *dep = graph_new_dependency(from, to, 0);
+        graph_new_dependency_to_list(list, &dep);
+        to_str = strtok(NULL, DEP_SIBLING_DELIM);
+    }
+    return list;
+}
+
+static struct dependency_list *
+_parse_codes_from_user(const char *dep_str,
+                       struct dependency_list **project_dependencies) {
+    char curr_code[ITEM_CODE_LEN] = {'\0'};
+    (void)strtok((char *)dep_str, DEP_DELIM);
+
+    /* Copy code given */
+    size_t prefix_len = strchr(dep_str, *DEP_DELIM) - dep_str;
+    strncpy(curr_code, dep_str,
+            prefix_len > ITEM_CODE_LEN ? ITEM_CODE_LEN : prefix_len);
+    sitem_id from = dir_get_id_from_prefix(curr_code);
+
+    if (from < 0) {
+        printf("No item listed with code prefix: %s\n", curr_code);
+        if (*project_dependencies) {
+            graph_free_dependency_list(project_dependencies);
+        }
+        return NULL;
+    }
+    memset(curr_code, 0, ITEM_CODE_LEN); /* Clear curr_code */
+
+    struct dependency_list *list = graph_init_dependency_list(0);
+
+    char *to_str = strtok(NULL, DEP_SIBLING_DELIM);
+    char *next_to_str = strtok(NULL, DEP_SIBLING_DELIM);
+    while (to_str) {
+        prefix_len =
+            next_to_str ? (size_t)(next_to_str - 1 - to_str) : strlen(to_str);
+        /* Avoid going over ITEM_CODE_LEN for stack safety */
+        strncpy(curr_code, to_str,
+                prefix_len > ITEM_CODE_LEN ? ITEM_CODE_LEN : prefix_len);
+        sitem_id to = dir_get_id_from_prefix(curr_code);
+
+        if (!dir_contains_item_with_id(to)) {
+            printf("No item in project with ID %d\n", to);
+            continue;
+        }
+        struct dependency *dep = graph_new_dependency(from, to, 0);
+        graph_new_dependency_to_list(list, &dep);
+
+        to_str = next_to_str;
+        next_to_str = strtok(NULL, DEP_SIBLING_DELIM);
+    }
+    return list;
 }
 
 /**
@@ -49,34 +128,17 @@ parse_dependencies_from_user(const char *dep_str,
         return NULL;
     }
 
-    /* Parse dependency string */
-    strtok((char *)dep_str, DEP_DELIM);
-    sitem_id from = strtoll(dep_str, NULL, 10);
-    if (!dir_contains_item_with_id(from)) {
-        printf("No item in project with ID %d\n", from);
-        if (*project_dependencies) {
-            graph_free_dependency_list(project_dependencies);
-        }
-        return NULL;
-    }
-    struct dependency_list *list = graph_init_dependency_list(0);
-    char *to_str = strtok(NULL, DEP_SIBLING_DELIM);
-    while (to_str) {
-        sitem_id to = strtoll(to_str, NULL, 10);
-        if (!dir_contains_item_with_id(to)) {
-            printf("No item in project with ID %d\n", to);
-            /* Continue anyway */
-            continue;
-        }
-        struct dependency *dep = graph_new_dependency(from, to, 0);
-        graph_new_dependency_to_list(list, &dep);
-        to_str = strtok(NULL, DEP_SIBLING_DELIM);
-    }
+    struct dependency_list *list = NULL;
 
+    if (dep_str[0] >= '0' && dep_str[0] <= '9') {
+        list = _parse_ids_from_user(dep_str, project_dependencies);
+    } else {
+        list = _parse_codes_from_user(dep_str, project_dependencies);
+    }
     return list;
 }
 
-void dep_add_ids(const char *dep_str) {
+void dep_add(const char *dep_str) {
     struct dependency_list *project_dependencies = dir_get_all_dependencies();
 
     struct dependency_list *user_list =

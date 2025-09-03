@@ -21,15 +21,18 @@
 extern void dep_help(void);
 
 /**
- * @brief Add an item dependency to the project given associated IDs
+ * @brief Add an item dependency to the project given associated IDs or project
+ * code prefixes (if applicable)
  * @param dep_str Dependency string with particular formatting expectations:
  * FORM: "a:b[,x]"
  * - This represents adding some item b and any other items "x" as a
  *   dependency/ies to some item a,
- * - Each item is represented by its ID
+ * - Each item is represented by its ID or item code prefixes
  * @note Strings of an invalid form will do nothing
+ * @note Only code *prefixes* are presently supported for creating item
+ * dependencies
  */
-extern void dep_add_ids(const char *dep_str);
+extern void dep_add(const char *dep_str);
 
 /*
  * @brief depend command

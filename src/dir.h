@@ -191,6 +191,7 @@ extern void dir_write_item_codes(item *const *items, const int *prefix_lengths);
 
 /**
  * @brief Return the ID of the item associated with the listed code prefix
+ * @param code_prefix Prefix string terminated with a null character
  * @return ID of associated item
  * @return -1 if no items have been listed in this project or code_prefix is
  * NULL
