@@ -1,5 +1,5 @@
 CC = gcc
-CBUILDFLAGS = -std=c11 -Werror -I$(SOURCEDIR) -DNDEBUG
+CBUILDFLAGS = -std=c11 -Werror -I$(SOURCEDIR) -DNDEBUG -03
 CDEVFLAGS = -fsanitize=address -std=c11 -Wall -Wextra -g -DDEBUG \
 			 -I$(SOURCEDIR)
 CTESTFLAGS = -fsanitize=address -std=c11 -Wall -Wno-implicit-function-declaration \
